@@ -1,0 +1,32 @@
+<div class="main-content">
+  <h1>🚚 MIS ENTREGAS</h1>
+
+  <select [(ngModel)]="zonaSeleccionada" (change)="cargar()">
+    <option value="">-- Elegí tu zona --</option>
+    <option *ngFor="let z of zonas" [value]="z.id">{{z.nombre}}</option>
+  </select>
+
+  <p *ngIf="!zonaSeleccionada" style="text-align:center">Seleccioná una zona para ver tus pedidos</p>
+  <p *ngIf="cargando">Cargando...</p>
+
+  <div *ngFor="let p of pedidos" class="card-pedido" [style.border-left]="'8px solid ' + getColor(p.estado)">
+    <div style="display:flex; justify-content:space-between">
+      <strong>{{p.clienteNombre}}</strong>
+      <span class="badge" [style.background]="getColor(p.estado)">{{p.estado}}</span>
+    </div>
+    <p>📍 {{p.direccion}}</p>
+    <p *ngIf="p.observacionEntrega" style="background:#fff3cd; padding:6px; border-radius:6px">📝 {{p.observacionEntrega}}</p>
+
+    <button class="btn-mapa" (click)="abrirMapa(p.direccion)">🗺️ Abrir en Maps</button>
+
+    <div class="grid-estados">
+      <button *ngFor="let e of estados"
+              [class.activo]="p.estado === e"
+              (click)="cambiarEstado(p,e)">{{e.replace('_',' ')}}</button>
+    </div>
+  </div>
+
+  <p *ngIf="zonaSeleccionada && pedidos.length===0 &&!cargando" style="text-align:center; margin-top:20px">
+    No tenés entregas asignadas en esta zona 🎉
+  </p>
+</div>
