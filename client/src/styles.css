@@ -1,0 +1,88 @@
+/* En styles.css */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-main, #f9f9f9);
+  position: relative;
+  min-height: 100vh;
+  color: var(--color-text-main);
+  font-family: var(--font-family-base);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body::before {
+
+  opacity: 0.02 !important;
+  z-index: -1 !important; /* en vez de 0 */
+
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90vw;
+  max-width: 1100px;
+  height: 90vw;
+  max-height: 1100px;
+  background-image: url('/logo-gabarain.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.10;
+  pointer-events: none;
+  z-index: 0; 
+  transition: opacity 0.3s ease;
+}
+
+/* 🌙 Ajuste de la marca de agua en modo oscuro para que sea más tenue */
+body.dark-theme::before {
+  opacity: 0.04; 
+}
+
+:root {
+  /* 🎨 PALETA DE COLORES - GABARAIN (Modo Claro) */
+  --color-primary: #b32d2d;
+  --color-primary-hover: #962323;
+  --color-primary-shadow: rgba(179, 45, 45, 0.35);
+
+  --color-bg-main: #f9f9f9;
+  --color-card-bg: #ffffff;
+  --color-navbar-text: #ffffff;
+
+  /* 🖋️ TIPOGRAFÍA Y TEXTOS */
+  --font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-text-main: #333333;
+  --color-text-muted: #666666;
+
+  /* 📐 BORDES Y SOMBRAS */
+  --color-border: #cccccc;
+  --color-border-light: #dddddd;
+  --border-radius-sm: 6px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 16px;
+  
+  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.15);
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-navbar: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 🌙 MODO OSCURO GLOBAL */
+body.dark-theme {
+  --color-primary: #d9534f;
+  --color-primary-hover: #c9302c;
+  --color-primary-shadow: rgba(217, 83, 79, 0.35);
+
+  --color-bg-main: #121212;
+  --color-card-bg: #1e1e1e;
+  --color-navbar-text: #e0e0e0;
+
+  --color-text-main: #e0e0e0;
+  --color-text-muted: #aaaaaa;
+
+  --color-border: #444444;
+  --color-border-light: #2c2c2c;
+
+  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-navbar: 0 2px 8px rgba(0, 0, 0, 0.5);
+}

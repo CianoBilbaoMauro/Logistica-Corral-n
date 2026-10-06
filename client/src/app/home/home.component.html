@@ -1,0 +1,51 @@
+<div class="home-container">
+  <header class="navbar"><div class="navbar-brand">Gabarain</div></header>
+  <main class="main-content">
+    <div class="header-section">
+      <div><h1 class="header-title">GESTIÓN DE PEDIDOS</h1><p class="header-subtitle">Panel de control de logística</p></div>
+      <button (click)="irANuevoPedido()" type="button" class="btn-crear">+ CREAR NUEVO PEDIDO</button>
+    </div>
+
+    <div class="filter-section">
+      <label class="filter-label">Filtrar por zona:</label>
+      <select [value]="zonaSeleccionada" (change)="cargarPedidos($any($event.target).value)" class="filter-select">
+        <option value="">Todas las zonas</option>
+        <option *ngFor="let zona of zonas" [value]="zona.id">{{ zona.nombre }}</option>
+      </select>
+    </div>
+
+    <div class="counter-section">Pedidos encontrados: <strong>{{ pedidos.length }}</strong></div>
+
+    <div *ngIf="cargando" class="state-box">Cargando pedidos...</div>
+    <div *ngIf="!cargando && pedidos.length === 0" class="state-box">No hay pedidos registrados.</div>
+
+    <div *ngIf="!cargando && pedidos.length > 0" class="cards-grid">
+      <div *ngFor="let pedido of pedidos" class="card-pedido" [attr.data-estado]="pedido.estado">
+        <div class="card-top">
+          <span class="estado-badge" [ngClass]="pedido.estado">{{ pedido.estado | titlecase }}</span>
+          <div class="card-acciones" (click)="$event.stopPropagation()">
+            <button class="btn-icon" (click)="editarPedido(pedido.id)" title="Editar">✏️</button>
+            <button class="btn-icon btn-delete" (click)="eliminarPedido(pedido.id)" title="Eliminar">🗑️</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3 class="cliente-nombre">{{ pedido.clienteNombre }}</h3>
+          <p *ngIf="pedido.clienteTelefono" class="pedido-dato">📞 {{ pedido.clienteTelefono }}</p>
+          <p class="pedido-dato">📍 {{ pedido.direccion }}</p>
+          <p *ngIf="pedido.fechaProgramada" class="pedido-dato">📅 {{ pedido.fechaProgramada }}</p>
+          <p *ngIf="pedido.franjaHoraria" class="pedido-dato chip-horario">🕒 {{ pedido.franjaHoraria === 'MANANA'? 'MAÑANA (8:30 a 12:30)' : 'TARDE (13:30 a 16:30)' }}</p>
+          <p *ngIf="pedido.camioneroNombre" class="pedido-dato">🚚 {{ pedido.camioneroNombre }}</p>
+          <p *ngIf="pedido.observacionEntrega" class="pedido-dato observacion">📝 {{ pedido.observacionEntrega }}</p>
+        </div>
+        <div class="card-footer">
+          <label class="estado-label">Cambiar estado</label>
+          <select [value]="pedido.estado || 'PENDIENTE'" (change)="alCambiarEstado(pedido.id, $event)" class="estado-select">
+            <option *ngFor="let est of estadosDisponibles" [value]="est.clave">{{ est.label }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </main>
+  <button class="btn-floating-theme" (click)="toggleDarkMode()">🌙</button>
+  <footer class="footer">AV. 9 NRO. 2107, MIRAMAR</footer>
+</div>

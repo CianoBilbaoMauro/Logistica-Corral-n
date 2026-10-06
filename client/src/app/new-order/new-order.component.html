@@ -1,0 +1,75 @@
+<div class="order-container" [ngClass]="{'dark-mode': isDarkMode}">
+  <header class="navbar">
+    <div class="navbar-brand">Gabarain</div>
+  </header>
+
+  <main class="main-content">
+    <div class="form-card">
+      <h2 class="form-title">NUEVO PEDIDO - LOGÍSTICA</h2>
+
+      <div class="form-group custom-select-container">
+        <label class="form-label">Zona de Entrega *</label>
+        <div class="select-box" (click)="toggleDropdown(); $event.stopPropagation()">
+          <span>{{ getZonaNombreSeleccionada() }}</span>
+          <span class="select-arrow">▼</span>
+        </div>
+        <div class="dropdown-options" *ngIf="dropdownAbierto">
+          <div class="dropdown-option" *ngFor="let zona of zonas" (click)="seleccionarZona(zona.id)">
+            {{ zona.nombre }}
+          </div>
+        </div>
+      </div>
+
+      <fieldset class="fieldset-cliente">
+        <legend class="legend-cliente">Datos del Cliente</legend>
+        <div class="form-group">
+          <label class="label-sub">Nombre completo *</label>
+          <input type="text" [(ngModel)]="nuevoPedido.clienteNombre" placeholder="Ej: Juan Pérez" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="label-sub">Teléfono de contacto *</label>
+          <input type="text" [(ngModel)]="nuevoPedido.clienteTelefono" placeholder="Ej: 2291..." class="form-input" />
+        </div>
+        <div>
+          <label class="label-sub">Dirección exacta / Obra *</label>
+          <input type="text" [(ngModel)]="nuevoPedido.direccion" placeholder="Ej: Av. 9 Nro. 2107" class="form-input" />
+        </div>
+      </fieldset>
+
+      <div class="form-group">
+        <label class="form-label">Fecha Programada de Entrega *</label>
+        <input type="date" [(ngModel)]="nuevoPedido.fechaProgramada" class="form-input" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Franja Horaria *</label>
+        <select [(ngModel)]="nuevoPedido.franjaHoraria" class="form-select">
+          <option value="" disabled>Seleccionar Franja Horaria</option>
+          <option value="MANANA">De mañana (8:30 hs a 12:30 hs)</option>
+          <option value="TARDE">Por la tarde (13:30 hs a 16:30 hs)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Camionero / Repartidor Asignado</label>
+        <input type="text" [(ngModel)]="nuevoPedido.camioneroNombre" placeholder="Ej: Carlos López" class="form-input" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Observaciones de Entrega</label>
+        <textarea [(ngModel)]="nuevoPedido.observacionEntrega" placeholder="Ej: Dejar al lado de la tranquera..." rows="3" class="form-textarea"></textarea>
+      </div>
+
+      <div class="actions-group">
+        <button (click)="cancelar()" type="button" class="btn-cancelar">CANCELAR</button>
+        <button (click)="guardarPedido()" [disabled]="guardando" type="button" class="btn-guardar">{{ guardando? 'GUARDANDO...' : 'ENVIAR PEDIDO' }}</button>
+      </div>
+    </div>
+  </main>
+
+  <button class="btn-floating-theme" (click)="toggleDarkMode()" title="Cambiar tema">
+    <img [src]="isDarkMode? 'sun.svg' : 'moon-stars.svg'" alt="Tema" class="floating-theme-icon" />
+  </button>
+
+  <footer class="footer">AV. 9 NRO. 2107, MIRAMAR</footer>
+</div>
