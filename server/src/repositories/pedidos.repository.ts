@@ -4,15 +4,8 @@ import type { Pedido, EstadoPedido } from '../models/pedido.model.js';
 export class PedidosRepository {
   obtenerTodos(zonaId?: string, estado?: EstadoPedido) {
     let resultado = pedidosMock;
-
-    if (zonaId) {
-      resultado = resultado.filter((p) => p.zonaId === zonaId);
-    }
-
-    if (estado) {
-      resultado = resultado.filter((p) => p.estado === estado);
-    }
-
+    if (zonaId) resultado = resultado.filter((p) => p.zonaId === zonaId);
+    if (estado) resultado = resultado.filter((p) => p.estado === estado);
     return resultado;
   }
 
@@ -26,11 +19,16 @@ export class PedidosRepository {
   }
 
   actualizar(pedidoActualizado: Pedido) {
-    const nuevosPedidos = pedidosMock.map((p) =>
-      p.id === pedidoActualizado.id ? pedidoActualizado : p
-    );
-
-    setPedidosMock(nuevosPedidos);
+    const nuevos = pedidosMock.map((p) => p.id === pedidoActualizado.id ? pedidoActualizado : p);
+    setPedidosMock(nuevos);
     return pedidoActualizado;
+  }
+
+  eliminar(id: string) {
+    const existe = pedidosMock.some((p) => p.id === id);
+    if (!existe) return false;
+    const nuevos = pedidosMock.filter((p) => p.id !== id);
+    setPedidosMock(nuevos);
+    return true;
   }
 }
