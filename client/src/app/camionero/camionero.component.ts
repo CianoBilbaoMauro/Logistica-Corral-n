@@ -1,63 +1,133 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { Subject, interval, of } from 'rxjs';
+import { catchError, filter, finalize, switchMap, tap } from 'rxjs/operators';
 import { PedidosService } from '../services/pedidos';
 import { Zona, Pedido, EstadoPedido } from '../models/logistica.model';
+import { ESTADOS, ESTADO_MAP, FRANJAS } from '../models/estados';
+
+const ZONA_KEY = 'zona_camionero';
+const POLLING_MS = 10_000;
+
+// Estados que el camionero NO ve en su lista
+const OCULTOS: EstadoPedido[] = ['PENDIENTE', 'ENTREGADO'];
+// Estados que el camionero puede asignar
+const PERMITIDOS: EstadoPedido[] = ['EN_CAMINO', 'LLEGA_PRONTO', 'ENTREGADO', 'CON_NOVEDAD', 'REPROGRAMADO'];
 
 @Component({
   selector: 'app-camionero',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, DatePipe],
   templateUrl: './camionero.component.html',
   styleUrl: './camionero.component.css'
 })
 export class CamioneroComponent implements OnInit {
   private service = inject(PedidosService);
-  zonas: Zona[] = [];
-  pedidos: Pedido[] = [];
-  zonaSeleccionada = localStorage.getItem('zona_camionero') || '';
-  cargando = false;
-  estados: EstadoPedido[] = ['EN_CAMINO','LLEGA_PRONTO','ENTREGADO','CON_NOVEDAD','REPROGRAMADO'];
+  private destroyRef = inject(DestroyRef);
+  private cargar$ = new Subject<{ zona: string; spinner: boolean }>();
+
+  // Signals: la pantalla se actualiza sola, con o sin zone.js
+  zonas = signal<Zona[]>([]);
+  pedidos = signal<Pedido[]>([]);
+  zonaSeleccionada = signal(localStorage.getItem(ZONA_KEY) || '');
+  cargando = signal(false);
+  error = signal<string | null>(null);
+  actualizando = signal<Set<string>>(new Set());
+
+  estados = ESTADOS.filter(e => PERMITIDOS.includes(e.clave));
+  franjas = FRANJAS;
 
   ngOnInit() {
-    this.service.getZonas().subscribe(z => this.zonas = z);
-    this.cargar();
-    // Se actualiza solo cada 10 seg por si el admin asigna algo nuevo
-    setInterval(() => { if(this.zonaSeleccionada) this.cargar(false) }, 10000);
-  }
-
-  cargar(conSpinner = true){
-    if(!this.zonaSeleccionada) return;
-    localStorage.setItem('zona_camionero', this.zonaSeleccionada);
-    if(conSpinner) this.cargando = true;
-    this.service.getPedidos(this.zonaSeleccionada).subscribe(p => {
-      // Camionero solo ve lo que NO es PENDIENTE
-      this.pedidos = p.filter(x => x.estado!== 'PENDIENTE');
-      this.cargando = false;
-    });
-  }
-
-  cambiarEstado(p: Pedido, estado: EstadoPedido){
-    this.service.actualizarEstado(p.id, estado).subscribe(res => {
-      p.estado = res.estado;
-      if(estado === 'ENTREGADO') {
-        setTimeout(()=> this.pedidos = this.pedidos.filter(x => x.id!== p.id), 500);
+    // switchMap cancela la request anterior si llega una nueva (zona distinta o polling)
+    this.cargar$.pipe(
+      tap(({ spinner }) => { if (spinner) { this.cargando.set(true); this.error.set(null); } }),
+      switchMap(({ zona }) => zona
+        ? this.service.getPedidos(zona).pipe(catchError(() => of(null)))
+        : of([] as Pedido[])),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(pedidos => {
+      this.cargando.set(false);
+      if (pedidos === null) {
+        this.error.set('No pudimos actualizar tus entregas. Se reintenta solo.');
+        return;
       }
+      if (this.actualizando().size) return; // no pisar un cambio de estado en curso
+      this.error.set(null);
+      this.pedidos.set(pedidos.filter(p => !OCULTOS.includes(p.estado)));
     });
-  }
 
-  getColor(estado: string){
-    switch(estado){
-      case 'EN_CAMINO': return '#3498db';
-      case 'LLEGA_PRONTO': return '#f1c40f';
-      case 'ENTREGADO': return '#2ecc71';
-      case 'CON_NOVEDAD': return '#e74c3c';
-      case 'REPROGRAMADO': return '#9b59b6';
-      default: return '#ccc';
+    this.service.getZonas().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(zonas => {
+      this.zonas.set(zonas);
+      const existe = zonas.some(z => String(z.id) === this.zonaSeleccionada());
+      if (this.zonaSeleccionada() && !existe) this.onZonaChange('');
+    });
+
+    // Refresca solo (pausa si la pestaña está oculta)
+    interval(POLLING_MS).pipe(
+      filter(() => !!this.zonaSeleccionada() && document.visibilityState === 'visible'),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => this.cargar$.next({ zona: this.zonaSeleccionada(), spinner: false }));
+
+    if (this.zonaSeleccionada()) {
+      this.cargar$.next({ zona: this.zonaSeleccionada(), spinner: true });
     }
   }
 
-  abrirMapa(dir: string){
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}`,'_blank');
+  onZonaChange(zona: string) {
+    this.zonaSeleccionada.set(zona);
+    if (zona) localStorage.setItem(ZONA_KEY, zona);
+    else localStorage.removeItem(ZONA_KEY);
+    this.pedidos.set([]);
+    this.error.set(null);
+    this.cargar$.next({ zona, spinner: !!zona });
+  }
+
+  cambiarEstado(p: Pedido, estado: EstadoPedido) {
+    if (p.estado === estado || this.actualizando().has(p.id)) return;
+
+    const anterior = p.estado;
+    this.setEstado(p.id, estado);      // actualización optimista
+    this.marcar(p.id, true);
+
+    this.service.actualizarEstado(p.id, estado)
+      .pipe(finalize(() => this.marcar(p.id, false)))
+      .subscribe({
+        next: res => {
+          this.setEstado(p.id, res.estado);
+          if (OCULTOS.includes(res.estado)) {
+            setTimeout(() => this.pedidos.update(l => l.filter(x => x.id !== p.id)), 600);
+          }
+        },
+        error: () => {
+          this.setEstado(p.id, anterior); // rollback
+          this.error.set('No se pudo cambiar el estado. Probá de nuevo.');
+        }
+      });
+  }
+
+  private setEstado(id: string, estado: EstadoPedido) {
+    this.pedidos.update(l => l.map(x => x.id === id ? { ...x, estado } : x));
+  }
+
+  private marcar(id: string, activo: boolean) {
+    this.actualizando.update(s => {
+      const n = new Set(s);
+      if (activo) n.add(id); else n.delete(id);
+      return n;
+    });
+  }
+
+  estadoInfo(e: EstadoPedido) {
+    return ESTADO_MAP[e] ?? ESTADO_MAP['PENDIENTE'];
+  }
+
+  urlMapa(dir: string): string {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}`;
+  }
+
+  urlTel(tel: string): string {
+    return 'tel:' + tel.replace(/[^\d+]/g, '');
   }
 }

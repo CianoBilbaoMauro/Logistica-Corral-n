@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Zona, Pedido, EstadoPedido } from '../models/logistica.model';
+import { Zona, Pedido, EstadoPedido, Aviso } from '../models/logistica.model';
 
 @Injectable({ providedIn: 'root' })
 export class PedidosService {
@@ -14,11 +14,12 @@ export class PedidosService {
   }
 
   getPedidos(zonaId?: string): Observable<Pedido[]> {
-    const url = zonaId? `${this.apiUrl}/pedidos?zonaId=${zonaId}` : `${this.apiUrl}/pedidos`;
-    return this.http.get<Pedido[]>(url).pipe(
+    let params = new HttpParams();
+    if (zonaId) params = params.set('zonaId', zonaId);
+    return this.http.get<Pedido[]>(`${this.apiUrl}/pedidos`, { params }).pipe(
       map((pedidos) => pedidos.map((p) => ({
-       ...p,
-        estado:!p.estado? 'PENDIENTE' as EstadoPedido : p.estado
+        ...p,
+        estado: !p.estado ? ('PENDIENTE' as EstadoPedido) : p.estado
       })))
     );
   }
@@ -28,10 +29,7 @@ export class PedidosService {
   }
 
   crearPedido(pedido: Partial<Pedido>): Observable<Pedido> {
-    return this.http.post<Pedido>(`${this.apiUrl}/pedidos`, {
-     ...pedido,
-      estado: pedido.estado || 'PENDIENTE'
-    });
+    return this.http.post<Pedido>(`${this.apiUrl}/pedidos`, pedido);
   }
 
   actualizarPedido(id: string, pedido: Partial<Pedido>): Observable<Pedido> {
@@ -42,7 +40,20 @@ export class PedidosService {
     return this.http.patch<Pedido>(`${this.apiUrl}/pedidos/${id}/estado`, { estado });
   }
 
-  deletePedido(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/pedidos/${id}`);
+  deletePedido(id: string): Observable<unknown> {
+    return this.http.delete(`${this.apiUrl}/pedidos/${id}`);
+  }
+
+  // Avisos a clientes
+  getAvisosPendientes(): Observable<Aviso[]> {
+    return this.http.get<Aviso[]>(`${this.apiUrl}/avisos`);
+  }
+
+  marcarAvisoEnviado(id: string): Observable<unknown> {
+    return this.http.patch(`${this.apiUrl}/avisos/${id}/enviado`, {});
+  }
+
+  descartarAviso(id: string): Observable<unknown> {
+    return this.http.patch(`${this.apiUrl}/avisos/${id}/descartado`, {});
   }
 }

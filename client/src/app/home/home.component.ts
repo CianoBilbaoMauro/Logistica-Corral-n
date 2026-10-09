@@ -1,13 +1,19 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { interval } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { PedidosService } from '../services/pedidos';
-import { Zona, Pedido, EstadoPedido } from '../models/logistica.model';
+import { Zona, Pedido, EstadoPedido, Aviso } from '../models/logistica.model';
+import { ESTADOS, ESTADO_MAP, FRANJAS } from '../models/estados';
+
+const POLLING_MS = 10_000;
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule],
+  imports: [DatePipe],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
@@ -15,31 +21,40 @@ export class HomeComponent implements OnInit {
   private pedidosService = inject(PedidosService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   pedidos: Pedido[] = [];
   zonas: Zona[] = [];
-  zonaSeleccionada: string = '';
-  cargando: boolean = false;
+  avisos: Aviso[] = [];
+  zonaSeleccionada = '';
+  cargando = false;
   isDarkMode = false;
 
-  estadosDisponibles: { clave: EstadoPedido; label: string }[] = [
-    { clave: 'PENDIENTE', label: 'Sin Notificar' },
-    { clave: 'NOTIFICADO', label: 'Notificado' },
-    { clave: 'EN_PREPARACION', label: 'En Preparación' },
-    { clave: 'EN_CAMINO', label: 'En Camino' },
-    { clave: 'LLEGA_PRONTO', label: 'Llega Pronto' },
-    { clave: 'REPROGRAMADO', label: 'Reprogramado' },
-    { clave: 'ENTREGADO', label: 'Entregado' },
-    { clave: 'CON_NOVEDAD', label: 'Con Novedad' }
-  ];
+  estadosDisponibles = ESTADOS;
+  franjas = FRANJAS;
 
   ngOnInit(): void {
+    this.isDarkMode = document.body.classList.contains('dark-theme');
     this.cargarZonas();
     this.cargarPedidos();
+    this.cargarAvisos();
+
+    // Refresco automático (pausa si la pestaña está oculta)
+    interval(POLLING_MS).pipe(
+      filter(() => document.visibilityState === 'visible'),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => {
+      this.refrescarPedidos();
+      this.cargarAvisos();
+    });
+  }
+
+  estadoInfo(e: EstadoPedido) {
+    return ESTADO_MAP[e] ?? ESTADO_MAP['PENDIENTE'];
   }
 
   toggleDarkMode(): void {
-    this.isDarkMode =!this.isDarkMode;
+    this.isDarkMode = !this.isDarkMode;
     document.body.classList.toggle('dark-theme', this.isDarkMode);
   }
 
@@ -52,7 +67,7 @@ export class HomeComponent implements OnInit {
   cargarPedidos(zonaId?: string): void {
     this.cargando = true;
     this.zonaSeleccionada = zonaId || '';
-    this.pedidosService.getPedidos(zonaId).subscribe({
+    this.pedidosService.getPedidos(zonaId || undefined).subscribe({
       next: (data) => {
         this.pedidos = [...data];
         this.cargando = false;
@@ -62,31 +77,65 @@ export class HomeComponent implements OnInit {
     });
   }
 
+  // Igual que cargarPedidos pero sin cartel de "Cargando..."
+  private refrescarPedidos(): void {
+    this.pedidosService.getPedidos(this.zonaSeleccionada || undefined).subscribe({
+      next: (data) => { this.pedidos = [...data]; this.cdr.detectChanges(); }
+    });
+  }
+
+  cargarAvisos(): void {
+    this.pedidosService.getAvisosPendientes().subscribe({
+      next: (data) => { this.avisos = data; this.cdr.detectChanges(); }
+    });
+  }
+
   alCambiarEstado(id: string, event: Event): void {
-    const nuevoEstado = (event.target as HTMLSelectElement).value as EstadoPedido;
+    const select = event.target as HTMLSelectElement;
+    const nuevoEstado = select.value as EstadoPedido;
+    const anterior = this.pedidos.find(p => p.id === id)?.estado;
+
     this.pedidosService.actualizarEstado(id, nuevoEstado).subscribe({
       next: (pedidoActualizado) => {
         const index = this.pedidos.findIndex((p) => p.id === id);
-        if (index!== -1) {
+        if (index !== -1) {
           this.pedidos[index].estado = pedidoActualizado.estado;
           this.pedidos = [...this.pedidos];
           this.cdr.detectChanges();
-          if (nuevoEstado!== 'PENDIENTE') this.enviarNotificacionWhatsApp(this.pedidos[index]);
         }
+        this.cargarAvisos(); // el backend pudo generar un aviso nuevo
+      },
+      error: () => {
+        if (anterior) select.value = anterior; // vuelve al estado anterior
+        alert('No se pudo cambiar el estado');
       }
     });
   }
 
-  enviarNotificacionWhatsApp(pedido: Pedido): void {
-    if (!pedido.clienteTelefono) return;
-    const etiquetas: Record<EstadoPedido, string> = {
-      PENDIENTE: 'Pendiente', NOTIFICADO: 'Notificado', EN_PREPARACION: 'En Preparación',
-      EN_CAMINO: 'En Camino', LLEGA_PRONTO: 'Llega Pronto', REPROGRAMADO: 'Reprogramado',
-      ENTREGADO: 'Entregado', CON_NOVEDAD: 'Con Novedad'
-    };
-    const mensaje = `🏗️ *Gabarain Materiales*\nHola *${pedido.clienteNombre}*, estado: ${etiquetas[pedido.estado]}\n📍 ${pedido.direccion}\n📅 ${pedido.fechaProgramada || 'Próximo viaje'}`;
-    const tel = pedido.clienteTelefono.replace(/\D/g, '');
-    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`, '_blank');
+  // Abre WhatsApp con el mensaje listo y marca el aviso como enviado
+  enviarWhatsApp(aviso: Aviso): void {
+    if (!aviso.telefono) return;
+    window.open(
+      `https://wa.me/${aviso.telefono}?text=${encodeURIComponent(aviso.mensaje)}`,
+      '_blank',
+      'noopener'
+    );
+    this.pedidosService.marcarAvisoEnviado(aviso.id).subscribe({
+      next: () => this.quitarAviso(aviso.id),
+      error: () => alert('Se abrió WhatsApp, pero no se pudo marcar el aviso como enviado.')
+    });
+  }
+
+  descartarAviso(aviso: Aviso): void {
+    this.pedidosService.descartarAviso(aviso.id).subscribe({
+      next: () => this.quitarAviso(aviso.id),
+      error: () => alert('No se pudo descartar el aviso')
+    });
+  }
+
+  private quitarAviso(id: string): void {
+    this.avisos = this.avisos.filter(a => a.id !== id);
+    this.cdr.detectChanges();
   }
 
   irANuevoPedido(): void { this.router.navigate(['/new-order']); }
@@ -96,8 +145,9 @@ export class HomeComponent implements OnInit {
     if (!confirm('¿Eliminar este pedido?')) return;
     this.pedidosService.deletePedido(id).subscribe({
       next: () => {
-        this.pedidos = this.pedidos.filter(p => p.id!== id);
+        this.pedidos = this.pedidos.filter(p => p.id !== id);
         this.cdr.detectChanges();
+        this.cargarAvisos();
       },
       error: () => alert('No se pudo eliminar')
     });

@@ -1,53 +1,34 @@
 import type { Request, Response } from 'express';
 import { PedidosService } from '../services/pedidos.service.js';
-import type { EstadoPedido } from '../models/pedido.model.js';
+import { NotFoundError } from '../errors/app-error.js';
+import { filtroPedidosSchema } from '../schemas/pedido.schema.js';
 
 const service = new PedidosService();
 
 export const obtenerPedidos = (req: Request, res: Response) => {
-  const zonaId = typeof req.query.zonaId === 'string' ? req.query.zonaId : undefined;
-  const estado = typeof req.query.estado === 'string' ? (req.query.estado as EstadoPedido) : undefined;
-  const pedidos = service.obtenerPedidos(zonaId, estado);
-  res.json(pedidos);
+  const { zonaId, estado } = filtroPedidosSchema.parse(req.query);
+  res.json(service.obtenerPedidos(zonaId, estado));
 };
 
 export const obtenerPedidoPorId = (req: Request, res: Response) => {
   const pedido = service.obtenerPorId(req.params.id as string);
-  if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+  if (!pedido) throw new NotFoundError('Pedido no encontrado');
   res.json(pedido);
 };
 
 export const crearPedido = (req: Request, res: Response) => {
-  const pedido = service.crearPedido(req.body);
-  res.status(201).json(pedido);
+  res.status(201).json(service.crearPedido(req.body));
 };
 
 export const actualizarEstadoPedido = (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    const pedido = service.actualizarEstado(id, req.body);
-    res.json(pedido);
-  } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'No encontrado' });
-  }
+  res.json(service.actualizarEstado(req.params.id as string, req.body.estado));
 };
 
 export const actualizarPedido = (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    const pedido = service.actualizarCompleto(id, req.body);
-    res.json(pedido);
-  } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'No encontrado' });
-  }
+  res.json(service.actualizarCompleto(req.params.id as string, req.body));
 };
 
 export const eliminarPedido = (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    service.eliminarPedido(id);
-    res.json({ message: 'Pedido eliminado correctamente' });
-  } catch (error) {
-    res.status(404).json({ error: error instanceof Error ? error.message : 'No encontrado' });
-  }
+  service.eliminarPedido(req.params.id as string);
+  res.json({ message: 'Pedido eliminado correctamente' });
 };

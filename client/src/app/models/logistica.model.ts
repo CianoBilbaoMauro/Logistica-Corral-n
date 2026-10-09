@@ -1,14 +1,15 @@
-export type EstadoPedido = 
+export type EstadoPedido =
   | 'PENDIENTE'
   | 'NOTIFICADO'
-  | 'EN_PREPARACION' 
-  | 'EN_CAMINO' 
-  | 'LLEGA_PRONTO' 
-  | 'REPROGRAMADO' 
+  | 'NOTIFICADO_PREVIO'
+  | 'EN_PREPARACION'
+  | 'EN_CAMINO'
+  | 'LLEGA_PRONTO'
+  | 'REPROGRAMADO'
   | 'ENTREGADO'
   | 'CON_NOVEDAD';
 
-export type FranjaHoraria = 'MANANA' | 'TARDE' | string;
+export type FranjaHoraria = 'MANANA' | 'TARDE';
 
 export interface Zona {
   id: string;
@@ -29,10 +30,22 @@ export interface Pedido {
   camioneroNombre?: string;
 }
 
+export interface Aviso {
+  id: string;
+  pedidoId: string;
+  estado: EstadoPedido;
+  mensaje: string;
+  clienteNombre: string;
+  telefono: string | null;
+  creadoEn: string;
+}
+
 export interface HojaDeRuta {
   id: string;
   fecha: string;
   zonaId: string;
-  camioneroNombre: string;
+  camioneroNombre?: string;
   pedidosIds: string[];
+  estado?: 'BORRADOR' | 'EN_PROCESO' | 'FINALIZADA';
+  observaciones?: string;
 }

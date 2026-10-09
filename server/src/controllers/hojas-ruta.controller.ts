@@ -1,43 +1,25 @@
 import type { Request, Response } from 'express';
 import { HojasRutaService } from '../services/hojas-ruta.service.js';
-import type { EstadoHojaDeRuta } from '../models/hoja-ruta.model.js';
+import { NotFoundError } from '../errors/app-error.js';
+import { filtroHojasSchema } from '../schemas/hoja-ruta.schema.js';
 
 const service = new HojasRutaService();
 
 export const obtenerHojas = (req: Request, res: Response) => {
-  const fecha = typeof req.query.fecha === 'string' ? req.query.fecha : undefined;
-  const zonaId = typeof req.query.zonaId === 'string' ? req.query.zonaId : undefined;
-  const estado = typeof req.query.estado === 'string' ? (req.query.estado as EstadoHojaDeRuta) : undefined;
-
-  const hojas = service.obtenerHojas(fecha, zonaId, estado);
-  res.json(hojas);
+  const { fecha, zonaId, estado } = filtroHojasSchema.parse(req.query);
+  res.json(service.obtenerHojas(fecha, zonaId, estado));
 };
 
 export const obtenerHojaPorId = (req: Request, res: Response) => {
-  const id = req.params.id as string;
-  const hoja = service.obtenerPorId(id);
-
-  if (!hoja) {
-    res.status(404).json({ error: 'Hoja de ruta no encontrada' });
-    return;
-  }
-
+  const hoja = service.obtenerPorId(req.params.id as string);
+  if (!hoja) throw new NotFoundError('Hoja de ruta no encontrada');
   res.json(hoja);
 };
 
 export const crearHoja = (req: Request, res: Response) => {
-  const hoja = service.crearHoja(req.body);
-  res.status(201).json(hoja);
+  res.status(201).json(service.crearHoja(req.body));
 };
 
 export const actualizarHoja = (req: Request, res: Response) => {
-  try {
-    const id = req.params.id as string;
-    const hoja = service.actualizarHoja(id, req.body);
-    res.json(hoja);
-  } catch (error) {
-    res.status(404).json({
-      error: error instanceof Error ? error.message : 'Hoja de ruta no encontrada',
-    });
-  }
+  res.json(service.actualizarHoja(req.params.id as string, req.body));
 };

@@ -1,51 +1,139 @@
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</svg>
+
 <div class="home-container">
-  <header class="navbar"><div class="navbar-brand">Gabarain</div></header>
+  <header class="navbar">
+    <div class="navbar-brand">Gabarain</div>
+  </header>
+
   <main class="main-content">
     <div class="header-section">
-      <div><h1 class="header-title">GESTIÓN DE PEDIDOS</h1><p class="header-subtitle">Panel de control de logística</p></div>
-      <button (click)="irANuevoPedido()" type="button" class="btn-crear">+ CREAR NUEVO PEDIDO</button>
+      <div>
+        <h1 class="header-title">Gestión de pedidos</h1>
+        <p class="header-subtitle">Panel de control de logística</p>
+      </div>
+      <button (click)="irANuevoPedido()" type="button" class="btn-crear">
+        <svg class="ico"><use href="#i-plus"/></svg> Nuevo pedido
+      </button>
     </div>
+
+    @if (avisos.length > 0) {
+      <section class="avisos" aria-label="Avisos pendientes a clientes">
+        <header class="avisos-head">
+          <h2>Avisos pendientes a clientes</h2>
+          <span class="avisos-count">{{ avisos.length }}</span>
+        </header>
+
+        <ul class="avisos-lista">
+          @for (a of avisos; track a.id) {
+            <li class="aviso" [attr.data-tono]="estadoInfo(a.estado).tono">
+              <div class="aviso-info">
+                <div class="aviso-linea">
+                  <strong>{{ a.clienteNombre }}</strong>
+                  <span class="badge">{{ estadoInfo(a.estado).label }}</span>
+                </div>
+                <p class="aviso-msg">{{ a.mensaje }}</p>
+                @if (!a.telefono) {
+                  <small class="aviso-error">El teléfono no es válido. Corregilo en "Editar pedido".</small>
+                }
+              </div>
+
+              <div class="aviso-acciones">
+                <button type="button" class="btn-wsp" [disabled]="!a.telefono" (click)="enviarWhatsApp(a)">
+                  <svg class="ico"><use href="#i-chat"/></svg> Enviar por WhatsApp
+                </button>
+                <button type="button" class="btn-ghost" (click)="descartarAviso(a)" aria-label="Descartar aviso" title="Descartar">
+                  <svg class="ico"><use href="#i-x"/></svg>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+    }
 
     <div class="filter-section">
-      <label class="filter-label">Filtrar por zona:</label>
-      <select [value]="zonaSeleccionada" (change)="cargarPedidos($any($event.target).value)" class="filter-select">
+      <label class="filter-label" for="zona">Zona</label>
+      <select id="zona" [value]="zonaSeleccionada" (change)="cargarPedidos($any($event.target).value)" class="filter-select">
         <option value="">Todas las zonas</option>
-        <option *ngFor="let zona of zonas" [value]="zona.id">{{ zona.nombre }}</option>
+        @for (zona of zonas; track zona.id) {
+          <option [value]="zona.id" [selected]="zona.id === zonaSeleccionada">{{ zona.nombre }}</option>
+        }
       </select>
+      <span class="counter-section">{{ pedidos.length }} pedidos</span>
     </div>
 
-    <div class="counter-section">Pedidos encontrados: <strong>{{ pedidos.length }}</strong></div>
+    @if (cargando) {
+      <div class="state-box">Cargando pedidos...</div>
+    } @else if (pedidos.length === 0) {
+      <div class="state-box">No hay pedidos registrados.</div>
+    } @else {
+      <div class="cards-grid">
+        @for (pedido of pedidos; track pedido.id) {
+          <article class="card" [attr.data-tono]="estadoInfo(pedido.estado).tono">
 
-    <div *ngIf="cargando" class="state-box">Cargando pedidos...</div>
-    <div *ngIf="!cargando && pedidos.length === 0" class="state-box">No hay pedidos registrados.</div>
+            <header class="card-head">
+              <h3 class="cliente">{{ pedido.clienteNombre }}</h3>
+              <span class="badge">{{ estadoInfo(pedido.estado).label }}</span>
+            </header>
 
-    <div *ngIf="!cargando && pedidos.length > 0" class="cards-grid">
-      <div *ngFor="let pedido of pedidos" class="card-pedido" [attr.data-estado]="pedido.estado">
-        <div class="card-top">
-          <span class="estado-badge" [ngClass]="pedido.estado">{{ pedido.estado | titlecase }}</span>
-          <div class="card-acciones" (click)="$event.stopPropagation()">
-            <button class="btn-icon" (click)="editarPedido(pedido.id)" title="Editar">✏️</button>
-            <button class="btn-icon btn-delete" (click)="eliminarPedido(pedido.id)" title="Eliminar">🗑️</button>
-          </div>
-        </div>
-        <div class="card-body">
-          <h3 class="cliente-nombre">{{ pedido.clienteNombre }}</h3>
-          <p *ngIf="pedido.clienteTelefono" class="pedido-dato">📞 {{ pedido.clienteTelefono }}</p>
-          <p class="pedido-dato">📍 {{ pedido.direccion }}</p>
-          <p *ngIf="pedido.fechaProgramada" class="pedido-dato">📅 {{ pedido.fechaProgramada }}</p>
-          <p *ngIf="pedido.franjaHoraria" class="pedido-dato chip-horario">🕒 {{ pedido.franjaHoraria === 'MANANA'? 'MAÑANA (8:30 a 12:30)' : 'TARDE (13:30 a 16:30)' }}</p>
-          <p *ngIf="pedido.camioneroNombre" class="pedido-dato">🚚 {{ pedido.camioneroNombre }}</p>
-          <p *ngIf="pedido.observacionEntrega" class="pedido-dato observacion">📝 {{ pedido.observacionEntrega }}</p>
-        </div>
-        <div class="card-footer">
-          <label class="estado-label">Cambiar estado</label>
-          <select [value]="pedido.estado || 'PENDIENTE'" (change)="alCambiarEstado(pedido.id, $event)" class="estado-select">
-            <option *ngFor="let est of estadosDisponibles" [value]="est.clave">{{ est.label }}</option>
-          </select>
-        </div>
+            <ul class="datos">
+              @if (pedido.clienteTelefono) {
+                <li><svg class="ico"><use href="#i-phone"/></svg>{{ pedido.clienteTelefono }}</li>
+              }
+              <li><svg class="ico"><use href="#i-pin"/></svg>{{ pedido.direccion }}</li>
+              @if (pedido.fechaProgramada) {
+                <li><svg class="ico"><use href="#i-cal"/></svg>{{ pedido.fechaProgramada | date:'dd/MM/yyyy' }}</li>
+              }
+              @if (pedido.franjaHoraria) {
+                <li><svg class="ico"><use href="#i-clock"/></svg>{{ franjas[pedido.franjaHoraria] }}</li>
+              }
+              @if (pedido.camioneroNombre) {
+                <li><svg class="ico"><use href="#i-truck"/></svg>{{ pedido.camioneroNombre }}</li>
+              }
+              @if (pedido.observacionEntrega) {
+                <li class="nota"><svg class="ico"><use href="#i-note"/></svg>{{ pedido.observacionEntrega }}</li>
+              }
+            </ul>
+
+            <footer class="card-foot">
+              <div class="campo">
+                <label [for]="'est-' + pedido.id">Estado</label>
+                <select [id]="'est-' + pedido.id" (change)="alCambiarEstado(pedido.id, $event)">
+                  @for (est of estadosDisponibles; track est.clave) {
+                    <option [value]="est.clave" [selected]="est.clave === pedido.estado">{{ est.label }}</option>
+                  }
+                </select>
+              </div>
+              <button class="btn-ghost" (click)="editarPedido(pedido.id)" aria-label="Editar pedido" title="Editar">
+                <svg class="ico"><use href="#i-edit"/></svg>
+              </button>
+              <button class="btn-ghost peligro" (click)="eliminarPedido(pedido.id)" aria-label="Eliminar pedido" title="Eliminar">
+                <svg class="ico"><use href="#i-trash"/></svg>
+              </button>
+            </footer>
+          </article>
+        }
       </div>
-    </div>
+    }
   </main>
-  <button class="btn-floating-theme" (click)="toggleDarkMode()">🌙</button>
+
+  <button class="btn-floating-theme" (click)="toggleDarkMode()" aria-label="Cambiar tema" title="Cambiar tema">
+    <svg class="ico ico-lg"><use [attr.href]="isDarkMode ? '#i-sun' : '#i-moon'"/></svg>
+  </button>
+
   <footer class="footer">AV. 9 NRO. 2107, MIRAMAR</footer>
 </div>

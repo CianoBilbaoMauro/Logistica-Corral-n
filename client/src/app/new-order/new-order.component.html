@@ -1,74 +1,104 @@
-<div class="order-container" [ngClass]="{'dark-mode': isDarkMode}">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></symbol>
+</svg>
+
+<div class="order-container">
   <header class="navbar">
     <div class="navbar-brand">Gabarain</div>
   </header>
 
   <main class="main-content">
-    <div class="form-card">
-      <h2 class="form-title">NUEVO PEDIDO - LOGÍSTICA</h2>
+    <form class="form-card" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
+      <h1 class="form-title">{{ modoEdicion ? 'Editar pedido' : 'Nuevo pedido' }}</h1>
 
-      <div class="form-group custom-select-container">
-        <label class="form-label">Zona de Entrega *</label>
-        <div class="select-box" (click)="toggleDropdown(); $event.stopPropagation()">
-          <span>{{ getZonaNombreSeleccionada() }}</span>
-          <span class="select-arrow">▼</span>
-        </div>
-        <div class="dropdown-options" *ngIf="dropdownAbierto">
-          <div class="dropdown-option" *ngFor="let zona of zonas" (click)="seleccionarZona(zona.id)">
-            {{ zona.nombre }}
-          </div>
-        </div>
+      @if (cargandoPedido) {
+        <p class="info" role="status">Cargando pedido...</p>
+      }
+      @if (error) {
+        <p class="alerta" role="alert">{{ error }}</p>
+      }
+
+      <div class="form-group">
+        <label class="form-label" for="zonaId">Zona de entrega *</label>
+        <select id="zonaId" class="form-select" formControlName="zonaId">
+          <option value="" disabled>Seleccionar zona</option>
+          @for (z of zonas; track z.id) {
+            <option [value]="z.id">{{ z.nombre }}</option>
+          }
+        </select>
+        @if (msg('zonaId')) { <small class="error">{{ msg('zonaId') }}</small> }
       </div>
 
       <fieldset class="fieldset-cliente">
-        <legend class="legend-cliente">Datos del Cliente</legend>
+        <legend class="legend-cliente">Datos del cliente</legend>
+
         <div class="form-group">
-          <label class="label-sub">Nombre completo *</label>
-          <input type="text" [(ngModel)]="nuevoPedido.clienteNombre" placeholder="Ej: Juan Pérez" class="form-input" />
+          <label class="label-sub" for="clienteNombre">Nombre completo *</label>
+          <input id="clienteNombre" type="text" class="form-input" formControlName="clienteNombre"
+                 placeholder="Ej: Juan Pérez" autocomplete="off" />
+          @if (msg('clienteNombre')) { <small class="error">{{ msg('clienteNombre') }}</small> }
         </div>
+
         <div class="form-group">
-          <label class="label-sub">Teléfono de contacto *</label>
-          <input type="text" [(ngModel)]="nuevoPedido.clienteTelefono" placeholder="Ej: 2291..." class="form-input" />
+          <label class="label-sub" for="clienteTelefono">Teléfono de contacto *</label>
+          <input id="clienteTelefono" type="tel" class="form-input" formControlName="clienteTelefono"
+                 placeholder="Ej: 2291 40 0001" autocomplete="off" />
+          @if (msg('clienteTelefono')) { <small class="error">{{ msg('clienteTelefono') }}</small> }
         </div>
-        <div>
-          <label class="label-sub">Dirección exacta / Obra *</label>
-          <input type="text" [(ngModel)]="nuevoPedido.direccion" placeholder="Ej: Av. 9 Nro. 2107" class="form-input" />
+
+        <div class="form-group sin-margen">
+          <label class="label-sub" for="direccion">Dirección exacta / Obra *</label>
+          <input id="direccion" type="text" class="form-input" formControlName="direccion"
+                 placeholder="Ej: Av. 9 Nro. 2107" autocomplete="off" />
+          @if (msg('direccion')) { <small class="error">{{ msg('direccion') }}</small> }
         </div>
       </fieldset>
 
-      <div class="form-group">
-        <label class="form-label">Fecha Programada de Entrega *</label>
-        <input type="date" [(ngModel)]="nuevoPedido.fechaProgramada" class="form-input" />
+      <div class="fila-2">
+        <div class="form-group">
+          <label class="form-label" for="fechaProgramada">Fecha de entrega *</label>
+          <input id="fechaProgramada" type="date" class="form-input" formControlName="fechaProgramada"
+                 [attr.min]="modoEdicion ? null : hoy" />
+          @if (msg('fechaProgramada')) { <small class="error">{{ msg('fechaProgramada') }}</small> }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="franjaHoraria">Franja horaria *</label>
+          <select id="franjaHoraria" class="form-select" formControlName="franjaHoraria">
+            <option value="" disabled>Seleccionar franja</option>
+            <option value="MANANA">{{ franjas['MANANA'] }}</option>
+            <option value="TARDE">{{ franjas['TARDE'] }}</option>
+          </select>
+          @if (msg('franjaHoraria')) { <small class="error">{{ msg('franjaHoraria') }}</small> }
+        </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label">Franja Horaria *</label>
-        <select [(ngModel)]="nuevoPedido.franjaHoraria" class="form-select">
-          <option value="" disabled>Seleccionar Franja Horaria</option>
-          <option value="MANANA">De mañana (8:30 hs a 12:30 hs)</option>
-          <option value="TARDE">Por la tarde (13:30 hs a 16:30 hs)</option>
-        </select>
+        <label class="form-label" for="camioneroNombre">Camionero / Repartidor asignado</label>
+        <input id="camioneroNombre" type="text" class="form-input" formControlName="camioneroNombre"
+               placeholder="Ej: Carlos López" autocomplete="off" />
+        @if (msg('camioneroNombre')) { <small class="error">{{ msg('camioneroNombre') }}</small> }
       </div>
 
       <div class="form-group">
-        <label class="form-label">Camionero / Repartidor Asignado</label>
-        <input type="text" [(ngModel)]="nuevoPedido.camioneroNombre" placeholder="Ej: Carlos López" class="form-input" />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Observaciones de Entrega</label>
-        <textarea [(ngModel)]="nuevoPedido.observacionEntrega" placeholder="Ej: Dejar al lado de la tranquera..." rows="3" class="form-textarea"></textarea>
+        <label class="form-label" for="observacionEntrega">Observaciones de entrega</label>
+        <textarea id="observacionEntrega" rows="3" class="form-textarea" formControlName="observacionEntrega"
+                  placeholder="Ej: Dejar al lado de la tranquera..."></textarea>
+        @if (msg('observacionEntrega')) { <small class="error">{{ msg('observacionEntrega') }}</small> }
       </div>
 
       <div class="actions-group">
-        <button (click)="cancelar()" type="button" class="btn-cancelar">CANCELAR</button>
-        <button (click)="guardarPedido()" [disabled]="guardando" type="button" class="btn-guardar">{{ guardando? 'GUARDANDO...' : 'ENVIAR PEDIDO' }}</button>
+        <button type="button" class="btn-cancelar" (click)="cancelar()">Cancelar</button>
+        <button type="submit" class="btn-guardar" [disabled]="guardando || cargandoPedido">
+          {{ guardando ? 'Guardando...' : 'Guardar pedido' }}
+        </button>
       </div>
-    </div>
+    </form>
   </main>
 
-  <button class="btn-floating-theme" (click)="toggleDarkMode()" title="Cambiar tema">
-    <img [src]="isDarkMode? 'sun.svg' : 'moon-stars.svg'" alt="Tema" class="floating-theme-icon" />
+  <button type="button" class="btn-floating-theme" (click)="toggleDarkMode()" aria-label="Cambiar tema" title="Cambiar tema">
+    <svg class="ico"><use [attr.href]="isDarkMode ? '#i-sun' : '#i-moon'"/></svg>
   </button>
 
   <footer class="footer">AV. 9 NRO. 2107, MIRAMAR</footer>
