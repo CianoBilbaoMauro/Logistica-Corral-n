@@ -1,13 +1,11 @@
 export const ESTADOS_PEDIDO = [
   'PENDIENTE',
   'NOTIFICADO',
-  'NOTIFICADO_PREVIO',
   'EN_PREPARACION',
   'EN_CAMINO',
-  'LLEGA_PRONTO',
-  'REPROGRAMADO',
   'ENTREGADO',
   'CON_NOVEDAD',
+  'REPROGRAMADO',
 ] as const;
 
 export type EstadoPedido = (typeof ESTADOS_PEDIDO)[number];
@@ -25,4 +23,6 @@ export interface Pedido {
   fechaProgramada?: string;
   observacionEntrega?: string;
   camioneroNombre?: string;
+  novedad?: string;              // comentario cuando el estado es CON_NOVEDAD o REPROGRAMADO
+  estadoActualizadoEn?: string;  // fecha y hora (ISO) del último cambio de estado
 }

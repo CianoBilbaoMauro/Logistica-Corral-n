@@ -1,18 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { PedidosRepository } from '../repositories/pedidos.repository.js';
+import { PedidosRepository, type FiltroPedidos } from '../repositories/pedidos.repository.js';
 import { ZonasRepository } from '../repositories/zonas.repository.js';
 import { AvisosService } from './avisos.service.js';
 import { AppError, NotFoundError } from '../errors/app-error.js';
-import type { Pedido, EstadoPedido } from '../models/pedido.model.js';
-import type { DatosPedido } from '../schemas/pedido.schema.js';
+import type { Pedido } from '../models/pedido.model.js';
+import type { DatosPedido, DatosCambioEstado } from '../schemas/pedido.schema.js';
 
 const repository = new PedidosRepository();
 const zonas = new ZonasRepository();
 const avisos = new AvisosService();
 
 export class PedidosService {
-  obtenerPedidos(zonaId?: string, estado?: EstadoPedido) {
-    return repository.obtenerTodos(zonaId, estado);
+  obtenerPedidos(filtro: FiltroPedidos = {}) {
+    return repository.obtenerTodos(filtro);
   }
 
   obtenerPorId(id: string) {
@@ -25,17 +25,29 @@ export class PedidosService {
       ...datos,
       id: randomUUID(),
       estado: 'PENDIENTE', // siempre arranca así, el cliente no lo elige
+      estadoActualizadoEn: new Date().toISOString(),
     };
     return repository.crear(nuevo);
   }
 
-  // Cambia SOLO el estado y genera el aviso al cliente
-  actualizarEstado(id: string, estado: EstadoPedido): Pedido {
+  // Cambia el estado, guarda el comentario y el momento del cambio, y genera el aviso al cliente
+  actualizarEstado(id: string, datos: DatosCambioEstado): Pedido {
+    const { estado, comentario } = datos;
     const pedido = repository.buscarPorId(id);
     if (!pedido) throw new NotFoundError('Pedido no encontrado');
-    if (pedido.estado === estado) return pedido; // sin cambio, sin aviso duplicado
 
-    const actualizado = repository.actualizar({ ...pedido, estado });
+    // Mismo estado y sin comentario nuevo: no hay nada que cambiar ni avisar
+    if (pedido.estado === estado && !comentario) return pedido;
+
+    // El comentario solo vive mientras el estado sea CON_NOVEDAD o REPROGRAMADO
+    const admiteNota = estado === 'CON_NOVEDAD' || estado === 'REPROGRAMADO';
+    const { novedad: _anterior, ...resto } = pedido;
+    const actualizado = repository.actualizar({
+      ...resto,
+      estado,
+      estadoActualizadoEn: new Date().toISOString(),
+      ...(admiteNota && comentario ? { novedad: comentario } : {}),
+    });
 
     // Si falla el aviso, el cambio de estado igual queda guardado
     try {
@@ -46,12 +58,18 @@ export class PedidosService {
     return actualizado;
   }
 
-  // Reemplaza los datos editables; id y estado se conservan
+  // Reemplaza los datos editables; id, estado, novedad y hora del último cambio se conservan
   actualizarCompleto(id: string, datos: DatosPedido): Pedido {
     const pedido = repository.buscarPorId(id);
     if (!pedido) throw new NotFoundError('Pedido no encontrado');
     this.verificarZona(datos.zonaId);
-    return repository.actualizar({ ...datos, id: pedido.id, estado: pedido.estado });
+    return repository.actualizar({
+      ...datos,
+      id: pedido.id,
+      estado: pedido.estado,
+      ...(pedido.novedad ? { novedad: pedido.novedad } : {}),
+      ...(pedido.estadoActualizadoEn ? { estadoActualizadoEn: pedido.estadoActualizadoEn } : {}),
+    });
   }
 
   eliminarPedido(id: string): void {

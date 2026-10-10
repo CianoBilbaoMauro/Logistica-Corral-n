@@ -1,10 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { PedidosService } from '../services/pedidos';
 import { Zona, Pedido } from '../models/logistica.model';
 import { FRANJAS } from '../models/estados';
+import { mensajeError } from '../utils/errores';
 
 function fechaLocalHoy(): string {
   const d = new Date();
@@ -35,11 +35,13 @@ export class NewOrderComponent implements OnInit {
   readonly hoy = fechaLocalHoy();
   readonly franjas = FRANJAS;
 
-  zonas: Zona[] = [];
+  // Signals: la pantalla se actualiza sola cuando responde el servidor
+  zonas = signal<Zona[]>([]);
+  guardando = signal(false);
+  cargandoPedido = signal(false);
+  error = signal<string | null>(null);
+
   pedidoId: string | null = null;
-  guardando = false;
-  cargandoPedido = false;
-  error: string | null = null;
   isDarkMode = false;
 
   form = this.fb.nonNullable.group({
@@ -61,8 +63,8 @@ export class NewOrderComponent implements OnInit {
     this.isDarkMode = document.body.classList.contains('dark-theme');
 
     this.service.getZonas().subscribe({
-      next: (zonas) => (this.zonas = zonas),
-      error: () => (this.error = 'No se pudieron cargar las zonas.'),
+      next: (zonas) => this.zonas.set(zonas),
+      error: (err) => this.error.set(mensajeError(err, 'No se pudieron cargar las zonas.')),
     });
 
     const id = this.route.snapshot.paramMap.get('id');
@@ -73,7 +75,7 @@ export class NewOrderComponent implements OnInit {
   }
 
   private cargarPedido(id: string): void {
-    this.cargandoPedido = true;
+    this.cargandoPedido.set(true);
     this.service.getPedidoPorId(id).subscribe({
       next: (p) => {
         this.form.patchValue({
@@ -86,23 +88,23 @@ export class NewOrderComponent implements OnInit {
           camioneroNombre: p.camioneroNombre ?? '',
           observacionEntrega: p.observacionEntrega ?? '',
         });
-        this.cargandoPedido = false;
+        this.cargandoPedido.set(false);
       },
       error: (err) => {
-        this.cargandoPedido = false;
-        this.error = this.mensajeError(err, 'No se pudo cargar el pedido.');
+        this.cargandoPedido.set(false);
+        this.error.set(mensajeError(err, 'No se pudo cargar el pedido.'));
       },
     });
   }
 
   guardar(): void {
-    this.error = null;
+    this.error.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    this.guardando = true;
+    this.guardando.set(true);
     const datos = this.form.getRawValue() as Partial<Pedido>;
 
     const peticion = this.modoEdicion && this.pedidoId
@@ -112,8 +114,8 @@ export class NewOrderComponent implements OnInit {
     peticion.subscribe({
       next: () => this.router.navigate(['/home']),
       error: (err) => {
-        this.guardando = false;
-        this.error = this.mensajeError(err, 'No se pudo guardar el pedido.');
+        this.guardando.set(false);
+        this.error.set(mensajeError(err, 'No se pudo guardar el pedido.'));
       },
     });
   }
@@ -126,26 +128,14 @@ export class NewOrderComponent implements OnInit {
   }
 
   // Mensaje de error de un campo (solo si fue tocado)
-  msg(campo: keyof typeof this.form.controls): string {
-    const c = this.form.controls[campo];
-    if (!c.touched || !c.errors) return '';
+  msg(campo: string): string {
+    const c = this.form.get(campo);
+    if (!c || !c.touched || !c.errors) return '';
     if (c.errors['required']) return 'Este campo es obligatorio';
     if (c.errors['minlength']) return 'Es demasiado corto';
     if (c.errors['maxlength']) return 'Es demasiado largo';
     if (c.errors['telefono']) return 'Ingresá un teléfono válido (entre 8 y 15 dígitos)';
     if (c.errors['pasada']) return 'La fecha no puede ser anterior a hoy';
     return 'Valor inválido';
-  }
-
-  private mensajeError(err: unknown, porDefecto: string): string {
-    if (err instanceof HttpErrorResponse) {
-      if (err.status === 0) return 'No se pudo conectar con el servidor.';
-      const detalles = err.error?.detalles;
-      if (Array.isArray(detalles) && detalles.length) {
-        return detalles.map((d: { mensaje: string }) => d.mensaje).join(' · ');
-      }
-      if (typeof err.error?.error === 'string') return err.error.error;
-    }
-    return porDefecto;
   }
 }

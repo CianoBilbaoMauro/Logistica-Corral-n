@@ -6,8 +6,8 @@ import { filtroPedidosSchema } from '../schemas/pedido.schema.js';
 const service = new PedidosService();
 
 export const obtenerPedidos = (req: Request, res: Response) => {
-  const { zonaId, estado } = filtroPedidosSchema.parse(req.query);
-  res.json(service.obtenerPedidos(zonaId, estado));
+  const filtro = filtroPedidosSchema.parse(req.query);
+  res.json(service.obtenerPedidos(filtro));
 };
 
 export const obtenerPedidoPorId = (req: Request, res: Response) => {
@@ -21,7 +21,7 @@ export const crearPedido = (req: Request, res: Response) => {
 };
 
 export const actualizarEstadoPedido = (req: Request, res: Response) => {
-  res.json(service.actualizarEstado(req.params.id as string, req.body.estado));
+  res.json(service.actualizarEstado(req.params.id as string, req.body));
 };
 
 export const actualizarPedido = (req: Request, res: Response) => {

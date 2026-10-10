@@ -4,6 +4,14 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Zona, Pedido, EstadoPedido, Aviso } from '../models/logistica.model';
 
+export interface FiltroPedidos {
+  zonaId?: string;
+  estado?: EstadoPedido;
+  desde?: string; // YYYY-MM-DD (fecha de entrega programada)
+  hasta?: string; // YYYY-MM-DD
+  q?: string;     // cliente, teléfono o dirección
+}
+
 @Injectable({ providedIn: 'root' })
 export class PedidosService {
   private http = inject(HttpClient);
@@ -13,9 +21,11 @@ export class PedidosService {
     return this.http.get<Zona[]>(`${this.apiUrl}/zonas`);
   }
 
-  getPedidos(zonaId?: string): Observable<Pedido[]> {
+  getPedidos(filtro: FiltroPedidos = {}): Observable<Pedido[]> {
     let params = new HttpParams();
-    if (zonaId) params = params.set('zonaId', zonaId);
+    for (const [clave, valor] of Object.entries(filtro)) {
+      if (valor) params = params.set(clave, valor);
+    }
     return this.http.get<Pedido[]>(`${this.apiUrl}/pedidos`, { params }).pipe(
       map((pedidos) => pedidos.map((p) => ({
         ...p,
@@ -36,8 +46,9 @@ export class PedidosService {
     return this.http.put<Pedido>(`${this.apiUrl}/pedidos/${id}`, pedido);
   }
 
-  actualizarEstado(id: string, estado: EstadoPedido): Observable<Pedido> {
-    return this.http.patch<Pedido>(`${this.apiUrl}/pedidos/${id}/estado`, { estado });
+  actualizarEstado(id: string, estado: EstadoPedido, comentario?: string): Observable<Pedido> {
+    const body = comentario ? { estado, comentario } : { estado };
+    return this.http.patch<Pedido>(`${this.apiUrl}/pedidos/${id}/estado`, body);
   }
 
   deletePedido(id: string): Observable<unknown> {

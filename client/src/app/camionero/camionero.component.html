@@ -4,6 +4,7 @@
   <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
   <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
 </svg>
 
 <div class="camionero-container">
@@ -14,16 +15,28 @@
   <main class="main-content">
     <h1 class="titulo">Mis entregas</h1>
 
-    <label class="visually-hidden" for="zona">Zona</label>
-    <select id="zona" class="select-zona" [ngModel]="zonaSeleccionada()" (ngModelChange)="onZonaChange($event)">
-      <option value="">Elegí tu zona</option>
-      @for (z of zonas(); track z.id) {
-        <option [value]="z.id">{{ z.nombre }}</option>
-      }
-    </select>
+    <details class="zonas-box">
+      <summary>
+        <span class="zonas-label">Zonas de hoy</span>
+        <span class="zonas-resumen">{{ resumenZonas() }}</span>
+      </summary>
 
-    @if (!zonaSeleccionada()) {
-      <p class="aviso">Seleccioná una zona para ver tus pedidos.</p>
+      <div class="zonas-lista">
+        @for (z of zonas(); track z.id) {
+          <label class="zona-opcion">
+            <input type="checkbox" [checked]="estaTildada(z.id)" (change)="alTildarZona(z.id, $event)" />
+            <span>{{ z.nombre }}</span>
+          </label>
+        }
+        <div class="zonas-atajos">
+          <button type="button" class="btn-atajo" (click)="todasLasZonas()">Todas</button>
+          <button type="button" class="btn-atajo" (click)="ningunaZona()">Ninguna</button>
+        </div>
+      </div>
+    </details>
+
+    @if (zonasSeleccionadas().length === 0) {
+      <p class="aviso">Elegí al menos una zona para ver tus pedidos.</p>
     }
     @if (cargando()) {
       <p class="aviso" role="status">Cargando...</p>
@@ -32,54 +45,91 @@
       <p class="aviso aviso--error" role="alert">{{ error() }}</p>
     }
 
-    @for (p of pedidos(); track p.id) {
-      <article class="card" [attr.data-tono]="estadoInfo(p.estado).tono">
-        <header class="card-head">
-          <h2 class="cliente">{{ p.clienteNombre }}</h2>
-          <span class="badge">{{ estadoInfo(p.estado).label }}</span>
-        </header>
+    @for (s of secciones(); track s.clave) {
+      <section class="seccion" [attr.data-seccion]="s.clave">
+        <h2 class="seccion-titulo">
+          {{ s.titulo }}
+          <span class="seccion-count">{{ s.items.length }}</span>
+        </h2>
 
-        <ul class="datos">
-          <li><svg class="ico"><use href="#i-pin"/></svg>{{ p.direccion }}</li>
-          @if (p.fechaProgramada) {
-            <li><svg class="ico"><use href="#i-cal"/></svg>{{ p.fechaProgramada | date:'dd/MM/yyyy' }}</li>
-          }
-          @if (p.franjaHoraria) {
-            <li><svg class="ico"><use href="#i-clock"/></svg>{{ franjas[p.franjaHoraria] }}</li>
-          }
-          @if (p.observacionEntrega) {
-            <li class="nota"><svg class="ico"><use href="#i-note"/></svg>{{ p.observacionEntrega }}</li>
-          }
-        </ul>
+        @for (p of s.items; track p.id) {
+          <article class="card" [attr.data-tono]="estadoInfo(p.estado).tono">
+            <header class="card-head">
+              <h3 class="cliente">{{ p.clienteNombre }}</h3>
+              <span class="badge">{{ estadoInfo(p.estado).label }}</span>
+            </header>
 
-        <div class="acciones">
-          <a class="btn-link" [href]="urlMapa(p.direccion)" target="_blank" rel="noopener">
-            <svg class="ico"><use href="#i-pin"/></svg> Abrir en Maps
-          </a>
-          @if (p.clienteTelefono) {
-            <a class="btn-link" [href]="urlTel(p.clienteTelefono)">
-              <svg class="ico"><use href="#i-phone"/></svg> Llamar
-            </a>
-          }
-        </div>
+            @if (zonasSeleccionadas().length > 1 && zonaNombre(p.zonaId)) {
+              <p class="zona-tag">{{ zonaNombre(p.zonaId) }}</p>
+            }
 
-        <div class="grid-estados">
-          @for (e of estados; track e.clave) {
-            <button type="button"
-                    [attr.data-tono]="e.tono"
-                    [class.activo]="p.estado === e.clave"
-                    [attr.aria-pressed]="p.estado === e.clave"
-                    [disabled]="actualizando().has(p.id)"
-                    (click)="cambiarEstado(p, e.clave)">
-              {{ e.label }}
-            </button>
-          }
-        </div>
-      </article>
+            <ul class="datos">
+              <li><svg class="ico"><use href="#i-pin"/></svg>{{ p.direccion }}</li>
+              @if (p.fechaProgramada) {
+                <li><svg class="ico"><use href="#i-cal"/></svg>{{ p.fechaProgramada | date:'dd/MM/yyyy' }}</li>
+              }
+              @if (p.franjaHoraria) {
+                <li><svg class="ico"><use href="#i-clock"/></svg>{{ franjas[p.franjaHoraria] }}</li>
+              }
+              @if (p.observacionEntrega) {
+                <li class="nota"><svg class="ico"><use href="#i-note"/></svg>{{ p.observacionEntrega }}</li>
+              }
+              @if (p.novedad) {
+                <li class="nota novedad"><svg class="ico"><use href="#i-alert"/></svg><span><strong>Novedad:</strong> {{ p.novedad }}</span></li>
+              }
+            </ul>
+
+            <div class="acciones">
+              <a class="btn-link" [href]="urlMapa(p.direccion)" target="_blank" rel="noopener">
+                <svg class="ico"><use href="#i-pin"/></svg> Abrir en Maps
+              </a>
+              @if (p.clienteTelefono) {
+                <a class="btn-link" [href]="urlTel(p.clienteTelefono)">
+                  <svg class="ico"><use href="#i-phone"/></svg> Llamar
+                </a>
+              }
+            </div>
+
+            <div class="grid-estados">
+              @for (e of estados; track e.clave) {
+                <button type="button"
+                        [attr.data-tono]="e.tono"
+                        [class.activo]="p.estado === e.clave"
+                        [attr.aria-pressed]="p.estado === e.clave"
+                        [disabled]="actualizando().has(p.id)"
+                        (click)="pulsarEstado(p, e.clave)">
+                  {{ etiquetaBoton(e.clave) }}
+                </button>
+              }
+            </div>
+
+            @if (novedadPendiente(); as np) {
+              @if (np.id === p.id) {
+                <div class="novedad-form">
+                  <label [for]="'nov-' + p.id">
+                    {{ estadoInfo(np.estado).label }}:
+                    {{ np.estado === 'CON_NOVEDAD' ? '¿qué pasó?' : 'motivo de la reprogramación' }}
+                  </label>
+                  <textarea [id]="'nov-' + p.id" rows="3" maxlength="300"
+                            [value]="np.texto" (input)="alEscribirNovedad($event)"
+                            placeholder="Ej: Faltó entregar una lata de pintura"></textarea>
+                  @if (errorNovedad()) { <span class="novedad-error">{{ errorNovedad() }}</span> }
+                  <div class="novedad-acciones">
+                    <button type="button" class="btn-sec" (click)="cancelarNovedad()">Cancelar</button>
+                    <button type="button" class="btn-prim" [disabled]="actualizando().has(p.id)" (click)="confirmarNovedad()">
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </article>
+        }
+      </section>
     }
 
-    @if (zonaSeleccionada() && !cargando() && !error() && pedidos().length === 0) {
-      <p class="aviso">No tenés entregas asignadas en esta zona.</p>
+    @if (zonasSeleccionadas().length > 0 && !cargando() && !error() && pedidos().length === 0) {
+      <p class="aviso">No hay entregas pendientes en las zonas elegidas.</p>
     }
   </main>
 

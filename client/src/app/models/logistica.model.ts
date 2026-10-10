@@ -1,13 +1,11 @@
 export type EstadoPedido =
   | 'PENDIENTE'
   | 'NOTIFICADO'
-  | 'NOTIFICADO_PREVIO'
   | 'EN_PREPARACION'
   | 'EN_CAMINO'
-  | 'LLEGA_PRONTO'
-  | 'REPROGRAMADO'
   | 'ENTREGADO'
-  | 'CON_NOVEDAD';
+  | 'CON_NOVEDAD'
+  | 'REPROGRAMADO';
 
 export type FranjaHoraria = 'MANANA' | 'TARDE';
 
@@ -28,6 +26,8 @@ export interface Pedido {
   fechaProgramada?: string;
   observacionEntrega?: string;
   camioneroNombre?: string;
+  novedad?: string;
+  estadoActualizadoEn?: string;
 }
 
 export interface Aviso {

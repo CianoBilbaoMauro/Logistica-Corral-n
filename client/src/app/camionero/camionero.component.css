@@ -96,3 +96,77 @@
 .card[data-tono='turquesa'], .grid-estados button[data-tono='turquesa'] { --tono: #0d9488; }
 .card[data-tono='verde'],    .grid-estados button[data-tono='verde']    { --tono: #16a34a; }
 .card[data-tono='rojo'],     .grid-estados button[data-tono='rojo']     { --tono: #dc2626; }
+
+/* NOVEDAD */
+.datos .novedad { background: color-mix(in srgb, #dc2626 10%, transparent); color: var(--color-text-main); }
+.datos .novedad .ico { color: #dc2626; }
+
+.novedad-form {
+  display: grid; gap: .5rem; margin-top: .8rem; padding: .8rem; border-radius: 8px;
+  background: color-mix(in srgb, #dc2626 6%, transparent);
+  border: 1px solid color-mix(in srgb, #dc2626 25%, transparent);
+}
+.novedad-form label { font-size: .9rem; font-weight: 600; color: var(--color-text-main); }
+.novedad-form textarea {
+  width: 100%; box-sizing: border-box; padding: .7rem; font: inherit; font-size: 1rem;
+  border: 1px solid var(--color-border); border-radius: 8px; resize: vertical;
+  background: var(--color-card-bg); color: var(--color-text-main);
+}
+.novedad-error { color: #dc2626; font-size: .85rem; }
+.novedad-acciones { display: flex; gap: .5rem; }
+.btn-sec, .btn-prim {
+  flex: 1; min-height: 46px; border-radius: 8px; font-size: .95rem; font-weight: 600; cursor: pointer;
+}
+.btn-sec { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-main); }
+.btn-prim { background: var(--color-primary); border: 1px solid var(--color-primary); color: #fff; }
+.btn-prim:disabled { opacity: .6; cursor: wait; }
+
+/* SECCIONES */
+.seccion { margin-bottom: 1.6rem; }
+.seccion-titulo {
+  display: flex; align-items: center; gap: .6rem; margin: 0 0 .8rem; padding-bottom: .5rem;
+  font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--color-text-muted); border-bottom: 1px solid var(--color-border-light);
+}
+.seccion-count {
+  min-width: 22px; padding: .05rem .5rem; text-align: center; font-size: .75rem; font-weight: 700;
+  color: var(--color-text-main); background: color-mix(in srgb, var(--color-text-main) 10%, transparent);
+  border-radius: 999px;
+}
+
+/* "Entregado sin novedad" ocupa todo el ancho */
+.grid-estados button[data-tono='verde'] { grid-column: 1 / -1; }
+
+/* ZONAS DE HOY */
+.zonas-box {
+  margin-bottom: 1rem; border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm); background: var(--color-card-bg);
+}
+.zonas-box summary {
+  display: grid; gap: .15rem; padding: .75rem .9rem; cursor: pointer; list-style: none;
+}
+.zonas-box summary::-webkit-details-marker { display: none; }
+.zonas-label {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--color-text-muted);
+}
+.zonas-resumen { font-size: 1rem; font-weight: 600; color: var(--color-text-main); }
+
+.zonas-lista { display: grid; gap: .1rem; padding: .3rem .9rem .9rem; border-top: 1px solid var(--color-border-light); }
+.zona-opcion {
+  display: flex; align-items: center; gap: .7rem; min-height: 44px;
+  font-size: .95rem; color: var(--color-text-main); cursor: pointer;
+}
+.zona-opcion input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--color-primary); }
+
+.zonas-atajos { display: flex; gap: .5rem; margin-top: .5rem; }
+.btn-atajo {
+  flex: 1; min-height: 40px; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer;
+  background: transparent; border: 1px solid var(--color-border); color: var(--color-text-main);
+}
+
+/* Zona dentro de la tarjeta (solo si hay varias zonas elegidas) */
+.zona-tag {
+  margin: .5rem 0 0; font-size: .75rem; font-weight: 600; letter-spacing: .03em;
+  color: var(--color-text-muted);
+}

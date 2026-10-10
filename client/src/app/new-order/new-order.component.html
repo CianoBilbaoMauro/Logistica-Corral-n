@@ -12,18 +12,18 @@
     <form class="form-card" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
       <h1 class="form-title">{{ modoEdicion ? 'Editar pedido' : 'Nuevo pedido' }}</h1>
 
-      @if (cargandoPedido) {
+      @if (cargandoPedido()) {
         <p class="info" role="status">Cargando pedido...</p>
       }
-      @if (error) {
-        <p class="alerta" role="alert">{{ error }}</p>
+      @if (error()) {
+        <p class="alerta" role="alert">{{ error() }}</p>
       }
 
       <div class="form-group">
         <label class="form-label" for="zonaId">Zona de entrega *</label>
         <select id="zonaId" class="form-select" formControlName="zonaId">
           <option value="" disabled>Seleccionar zona</option>
-          @for (z of zonas; track z.id) {
+          @for (z of zonas(); track z.id) {
             <option [value]="z.id">{{ z.nombre }}</option>
           }
         </select>
@@ -90,8 +90,8 @@
 
       <div class="actions-group">
         <button type="button" class="btn-cancelar" (click)="cancelar()">Cancelar</button>
-        <button type="submit" class="btn-guardar" [disabled]="guardando || cargandoPedido">
-          {{ guardando ? 'Guardando...' : 'Guardar pedido' }}
+        <button type="submit" class="btn-guardar" [disabled]="guardando() || cargandoPedido()">
+          {{ guardando() ? 'Guardando...' : 'Guardar pedido' }}
         </button>
       </div>
     </form>
