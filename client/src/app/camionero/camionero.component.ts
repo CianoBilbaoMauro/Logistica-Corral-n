@@ -7,11 +7,11 @@ import { PedidosService } from '../services/pedidos';
 import { ToastService } from '../services/toast.service';
 import { Zona, Pedido, EstadoPedido } from '../models/logistica.model';
 import { ESTADO_MAP, ESTADOS_CON_COMENTARIO, FRANJAS } from '../models/estados';
-import { urlDestino } from '../utils/mapas';
 import { mensajeError } from '../utils/errores';
 import { BarraSuperiorComponent } from '../shared/barra-superior/barra-superior.component';
 import { BotonTemaComponent } from '../shared/boton-tema/boton-tema.component';
 import { PiePaginaComponent } from '../shared/pie-pagina/pie-pagina.component';
+import { esDestinoAproximado, urlDestino } from '../utils/mapas';
 
 const ZONAS_KEY = 'zonas_camionero';
 const ZONA_KEY_VIEJA = 'zona_camionero';
@@ -250,4 +250,9 @@ export class CamioneroComponent implements OnInit {
   urlTel(tel: string): string {
     return 'tel:' + tel.replace(/[^\d+]/g, '');
   }
+
+  aproximado(p: Pedido): boolean {
+    return esDestinoAproximado(p);
+  }
+
 }

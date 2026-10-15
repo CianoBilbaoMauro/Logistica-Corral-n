@@ -7,16 +7,20 @@
 
       <div class="header-acciones">
         <button type="button" class="btn-header" (click)="imprimirHoja()" title="Imprimir hoja de ruta">
-          <svg class="ico"><use href="#i-printer"/></svg> Hoja de ruta
+          <svg class="ico">
+            <use href="#i-printer" />
+          </svg> Hoja de ruta
         </button>
         <button type="button" class="btn-crear" (click)="irANuevoPedido()">
-          <svg class="ico"><use href="#i-plus"/></svg> Nuevo pedido
+          <svg class="ico">
+            <use href="#i-plus" />
+          </svg> Nuevo pedido
         </button>
       </div>
     </div>
 
     @if (sinConexion()) {
-      <p class="alerta" role="alert">Sin conexión con el servidor. Reintentando...</p>
+    <p class="alerta" role="alert">Sin conexión con el servidor. Reintentando...</p>
     }
 
     <!-- RESUMEN: tocar un estado filtra la lista -->
@@ -26,55 +30,60 @@
         <span class="tile-num">{{ pedidosCargados().length }}</span>
       </button>
       @for (r of resumen(); track r.clave) {
-        <button type="button" class="tile" [class.activo]="estadoFiltro() === r.clave"
-                [class.vacio]="r.cantidad === 0" (click)="filtrarEstado(r.clave)">
-          <span class="tile-label">{{ r.label }}</span>
-          <span class="tile-num">{{ r.cantidad }}</span>
-        </button>
+      <button type="button" class="tile" [class.activo]="estadoFiltro() === r.clave" [class.vacio]="r.cantidad === 0"
+        (click)="filtrarEstado(r.clave)">
+        <span class="tile-label">{{ r.label }}</span>
+        <span class="tile-num">{{ r.cantidad }}</span>
+      </button>
       }
     </section>
 
     @if (avisos().length > 0) {
-      <section class="avisos" aria-label="Avisos pendientes a clientes">
-        <header class="avisos-head">
-          <h2>Avisos pendientes a clientes</h2>
-          <span class="avisos-count">{{ avisos().length }}</span>
-        </header>
+    <section class="avisos" aria-label="Avisos pendientes a clientes">
+      <header class="avisos-head">
+        <h2>Avisos pendientes a clientes</h2>
+        <span class="avisos-count">{{ avisos().length }}</span>
+      </header>
 
-        <ul class="avisos-lista">
-          @for (a of avisos(); track a.id) {
-            <li class="aviso" [attr.data-tono]="estadoInfo(a.estado).tono">
-              <div class="aviso-info">
-                <div class="aviso-linea">
-                  <strong>{{ a.clienteNombre }}</strong>
-                  <span class="badge">{{ estadoInfo(a.estado).label }}</span>
-                </div>
-                <p class="aviso-msg">{{ a.mensaje }}</p>
-                @if (!a.telefono) {
-                  <small class="aviso-error">El teléfono no es válido. Corregilo en "Editar pedido".</small>
-                }
-              </div>
+      <ul class="avisos-lista">
+        @for (a of avisos(); track a.id) {
+        <li class="aviso" [attr.data-tono]="estadoInfo(a.estado).tono">
+          <div class="aviso-info">
+            <div class="aviso-linea">
+              <strong>{{ a.clienteNombre }}</strong>
+              <span class="badge">{{ estadoInfo(a.estado).label }}</span>
+            </div>
+            <p class="aviso-msg">{{ a.mensaje }}</p>
+            @if (!a.telefono) {
+            <small class="aviso-error">El teléfono no es válido. Corregilo en "Editar pedido".</small>
+            }
+          </div>
 
-              <div class="aviso-acciones">
-                <button type="button" class="btn-wsp" [disabled]="!a.telefono" (click)="enviarWhatsApp(a)">
-                  <svg class="ico"><use href="#i-chat"/></svg> Enviar por WhatsApp
-                </button>
-                <button type="button" class="btn-ghost" (click)="descartarAviso(a)" aria-label="Descartar aviso" title="Descartar">
-                  <svg class="ico"><use href="#i-x"/></svg>
-                </button>
-              </div>
-            </li>
-          }
-        </ul>
-      </section>
+          <div class="aviso-acciones">
+            <button type="button" class="btn-wsp" [disabled]="!a.telefono" (click)="enviarWhatsApp(a)">
+              <svg class="ico">
+                <use href="#i-chat" />
+              </svg> Enviar por WhatsApp
+            </button>
+            <button type="button" class="btn-ghost" (click)="descartarAviso(a)" aria-label="Descartar aviso"
+              title="Descartar">
+              <svg class="ico">
+                <use href="#i-x" />
+              </svg>
+            </button>
+          </div>
+        </li>
+        }
+      </ul>
+    </section>
     }
 
     <!-- FILTROS: una sola barra -->
     <section class="filtros" aria-label="Filtros de pedidos">
       <div class="filtro-busqueda">
         <label class="visually-hidden" for="buscar">Buscar</label>
-        <input id="buscar" type="search" placeholder="Cliente, teléfono, dirección o N° de factura"
-               autocomplete="off" [value]="busqueda()" (input)="alBuscar($event)" />
+        <input id="buscar" type="search" placeholder="Cliente, teléfono, dirección o N° de factura" autocomplete="off"
+          [value]="busqueda()" (input)="alBuscar($event)" />
       </div>
 
       <div class="filtro-campo">
@@ -82,19 +91,21 @@
         <select id="zona" (change)="alCambiarZona($event)">
           <option value="" [selected]="!zonaSeleccionada()">Todas las zonas</option>
           @for (zona of zonas(); track zona.id) {
-            <option [value]="zona.id" [selected]="zona.id === zonaSeleccionada()">{{ zona.nombre }}</option>
+          <option [value]="zona.id" [selected]="zona.id === zonaSeleccionada()">{{ zona.nombre }}</option>
           }
         </select>
       </div>
 
       <div class="filtro-campo">
         <label for="desde">Desde</label>
-        <input id="desde" type="date" [value]="desde()" [attr.max]="hasta() || null" (change)="alCambiarDesde($event)" />
+        <input id="desde" type="date" [value]="desde()" [attr.max]="hasta() || null"
+          (change)="alCambiarDesde($event)" />
       </div>
 
       <div class="filtro-campo">
         <label for="hasta">Hasta</label>
-        <input id="hasta" type="date" [value]="hasta()" [attr.min]="desde() || null" (change)="alCambiarHasta($event)" />
+        <input id="hasta" type="date" [value]="hasta()" [attr.min]="desde() || null"
+          (change)="alCambiarHasta($event)" />
       </div>
 
       <button type="button" class="btn-limpiar" [disabled]="!hayFiltros()" (click)="limpiarFiltros()">
@@ -105,128 +116,170 @@
     <p class="contador">{{ pedidos().length }} pedidos</p>
 
     @if (cargando()) {
-      <div class="state-box">Cargando pedidos...</div>
+    <div class="state-box">Cargando pedidos...</div>
     } @else if (pedidos().length === 0) {
-      <div class="state-box">
-        {{ hayFiltros() ? 'No hay pedidos para los filtros elegidos.' : 'No hay pedidos registrados.' }}
-      </div>
+    <div class="state-box">
+      {{ hayFiltros() ? 'No hay pedidos para los filtros elegidos.' : 'No hay pedidos registrados.' }}
+    </div>
     } @else {
-      <div class="cards-grid">
-        @for (pedido of pedidos(); track pedido.id) {
-          <article class="card" [attr.data-tono]="estadoInfo(pedido.estado).tono">
+    <div class="cards-grid">
+      @for (pedido of pedidos(); track pedido.id) {
+      <article class="card" [attr.data-tono]="estadoInfo(pedido.estado).tono">
 
-            <header class="card-head">
-              <div class="avatar" aria-hidden="true">{{ iniciales(pedido.clienteNombre) }}</div>
-              <div class="card-titulo">
-                <h3 class="cliente">{{ pedido.clienteNombre }}</h3>
-                @if (zonaNombre(pedido.zonaId)) {
-                  <span class="zona-chip"><svg class="ico"><use href="#i-pin"/></svg>{{ zonaNombre(pedido.zonaId) }}</span>
-                }
-              </div>
-              <button type="button" class="btn-ghost peligro" (click)="eliminarPedido(pedido)" aria-label="Eliminar pedido" title="Eliminar">
-                <svg class="ico"><use href="#i-trash"/></svg>
-              </button>
-            </header>
-
-            <ul class="datos">
-              @if (pedido.clienteTelefono) {
-                <li><svg class="ico"><use href="#i-phone"/></svg>{{ pedido.clienteTelefono }}</li>
-              }
-              <li><svg class="ico"><use href="#i-pin"/></svg>{{ pedido.direccion }}</li>
-              @if (pedido.ubicacionUrl) {
-                <li>
-                  <svg class="ico"><use href="#i-nav"/></svg>
-                  <a class="enlace" [href]="destino(pedido)" target="_blank" rel="noopener">Ubicación exacta cargada</a>
-                </li>
-              }
-              @if (pedido.fechaProgramada || pedido.franjaHoraria) {
-                <li class="doble">
-                  @if (pedido.fechaProgramada) {
-                    <span><svg class="ico"><use href="#i-cal"/></svg>Entrega: <strong>{{ pedido.fechaProgramada | date:'dd/MM/yyyy' }}</strong></span>
-                  }
-                  @if (pedido.franjaHoraria) {
-                    <span><svg class="ico"><use href="#i-clock"/></svg><strong>{{ franjas[pedido.franjaHoraria] }}</strong></span>
-                  }
-                </li>
-              }
-              @if (comprobante(pedido)) {
-                <li class="factura">
-                  <svg class="ico"><use href="#i-note"/></svg>
-                  <span>Comprobante: <strong>{{ comprobante(pedido) }}</strong></span>
-                </li>
-              }
-              @if (pedido.camioneroNombre) {
-                <li><svg class="ico"><use href="#i-truck"/></svg>Camionero: <strong>{{ pedido.camioneroNombre }}</strong></li>
-              }
-            </ul>
-
-            @if (pedido.observacionEntrega) {
-              <p class="nota-linea"><svg class="ico"><use href="#i-note"/></svg>Nota: {{ pedido.observacionEntrega }}</p>
+        <header class="card-head">
+          <div class="avatar" aria-hidden="true">{{ iniciales(pedido.clienteNombre) }}</div>
+          <div class="card-titulo">
+            <h3 class="cliente">{{ pedido.clienteNombre }}</h3>
+            @if (zonaNombre(pedido.zonaId)) {
+            <span class="zona-chip"><svg class="ico">
+                <use href="#i-pin" />
+              </svg>{{ zonaNombre(pedido.zonaId) }}</span>
             }
-            @if (pedido.novedad) {
-              <p class="nota-linea novedad"><svg class="ico"><use href="#i-alert"/></svg><span><strong>Novedad:</strong> {{ pedido.novedad }}</span></p>
+          </div>
+          <button type="button" class="btn-ghost peligro" (click)="eliminarPedido(pedido)" aria-label="Eliminar pedido"
+            title="Eliminar">
+            <svg class="ico">
+              <use href="#i-trash" />
+            </svg>
+          </button>
+        </header>
+
+        <ul class="datos">
+          @if (pedido.clienteTelefono) {
+          <li><svg class="ico">
+              <use href="#i-phone" />
+            </svg>{{ pedido.clienteTelefono }}</li>
+          }
+          <li><svg class="ico">
+              <use href="#i-pin" />
+            </svg>{{ pedido.direccion }}</li>
+          @if (pedido.ubicacionUrl) {
+          <li>
+            <svg class="ico">
+              <use href="#i-nav" />
+            </svg>
+            <a class="enlace" [href]="destino(pedido)" target="_blank" rel="noopener">Ubicación exacta cargada</a>
+          </li>
+          }
+          @if (pedido.fechaProgramada || pedido.franjaHoraria) {
+          <li class="doble">
+            @if (pedido.fechaProgramada) {
+            <span><svg class="ico">
+                <use href="#i-cal" />
+              </svg>Entrega: <strong>{{ pedido.fechaProgramada | date:'dd/MM/yyyy' }}</strong></span>
             }
-
-            <div class="estado-fila">
-              <span class="estado-pill">{{ estadoInfo(pedido.estado).label }}</span>
-              @if (pedido.estadoActualizadoEn && pedido.estado !== 'PENDIENTE') {
-                <small class="estado-hora">
-                  {{ pedido.estadoActualizadoEn | date:'dd/MM/yyyy' }} · {{ pedido.estadoActualizadoEn | date:'HH:mm' }}
-                </small>
-              }
-            </div>
-
-            @if (novedadPendiente(); as np) {
-              @if (np.id === pedido.id) {
-                <div class="novedad-form">
-                  <label [for]="'nov-' + pedido.id">
-                    {{ estadoInfo(np.estado).label }}:
-                    {{ np.estado === 'CON_NOVEDAD' ? '¿qué pasó?' : 'motivo de la reprogramación' }}
-                  </label>
-                  <textarea [id]="'nov-' + pedido.id" rows="2" maxlength="300"
-                            [value]="np.texto" (input)="alEscribirNovedad($event)"
-                            placeholder="Ej: Faltó entregar una lata de pintura"></textarea>
-                  @if (errorNovedad()) { <span class="novedad-error">{{ errorNovedad() }}</span> }
-                  <div class="novedad-acciones">
-                    <button type="button" class="btn-sec" (click)="cancelarNovedad()">Cancelar</button>
-                    <button type="button" class="btn-prim" [disabled]="guardandoNovedad()" (click)="confirmarNovedad()">
-                      Confirmar
-                    </button>
-                  </div>
-                </div>
-              }
+            @if (pedido.franjaHoraria) {
+            <span><svg class="ico">
+                <use href="#i-clock" />
+              </svg><strong>{{ franjas[pedido.franjaHoraria] }}</strong></span>
             }
+          </li>
+          }
 
-            <div class="acciones">
-              @if (urlWsp(pedido.clienteTelefono); as wsp) {
-                <a class="accion wsp" [href]="wsp" target="_blank" rel="noopener">
-                  <svg class="ico"><use href="#i-chat"/></svg> WhatsApp
-                </a>
-              } @else {
-                <span class="accion wsp inactivo"><svg class="ico"><use href="#i-chat"/></svg> WhatsApp</span>
-              }
-              <a class="accion llamar" [href]="urlTel(pedido.clienteTelefono)">
-                <svg class="ico"><use href="#i-phone"/></svg> Llamar
-              </a>
-              <button type="button" class="accion editar" (click)="editarPedido(pedido.id)">
-                <svg class="ico"><use href="#i-edit"/></svg> Editar
-              </button>
-            </div>
+          @if (pedido.camioneroNombre) {
+          <li><svg class="ico">
+              <use href="#i-truck" />
+            </svg>Camionero: <strong>{{ pedido.camioneroNombre }}</strong></li>
+          }
+        </ul>
 
-            <div class="cambiar-estado">
-              <label [for]="'est-' + pedido.id">Cambiar estado</label>
-              <select [id]="'est-' + pedido.id" (change)="alCambiarEstado(pedido.id, $event)">
-                @if (!esEstadoAdmin(pedido.estado)) {
-                  <option [value]="pedido.estado" selected disabled>{{ estadoInfo(pedido.estado).label }}</option>
-                }
-                @for (est of estadosDisponibles; track est.clave) {
-                  <option [value]="est.clave" [selected]="est.clave === pedido.estado">{{ est.label }}</option>
-                }
-              </select>
-            </div>
-          </article>
+        <div class="factura-box">
+          <div class="factura-item">
+            <span class="factura-label">Comprobante</span>
+            <strong>{{ tipo(pedido) || '—' }}</strong>
+          </div>
+          <div class="factura-item">
+            <span class="factura-label">Pago</span>
+            <strong>{{ pago(pedido) || '—' }}</strong>
+          </div>
+          <div class="factura-item">
+            <span class="factura-label">Facturado por</span>
+            <strong>{{ emisor(pedido) || '—' }}</strong>
+          </div>
+          <div class="factura-item">
+            <span class="factura-label">N° de factura</span>
+            <strong>{{ pedido.nroFactura || '—' }}</strong>
+          </div>
+        </div>
+
+        @if (pedido.observacionEntrega) {
+        <p class="nota-linea"><svg class="ico">
+            <use href="#i-note" />
+          </svg>Nota: {{ pedido.observacionEntrega }}</p>
         }
-      </div>
+        @if (pedido.novedad) {
+        <p class="nota-linea novedad"><svg class="ico">
+            <use href="#i-alert" />
+          </svg><span><strong>Novedad:</strong> {{ pedido.novedad }}</span></p>
+        }
+
+        <div class="estado-fila">
+          <span class="estado-pill">{{ estadoInfo(pedido.estado).label }}</span>
+          @if (pedido.estadoActualizadoEn && pedido.estado !== 'PENDIENTE') {
+          <small class="estado-hora">
+            {{ pedido.estadoActualizadoEn | date:'dd/MM/yyyy' }} · {{ pedido.estadoActualizadoEn | date:'HH:mm' }}
+          </small>
+          }
+        </div>
+
+        @if (novedadPendiente(); as np) {
+        @if (np.id === pedido.id) {
+        <div class="novedad-form">
+          <label [for]="'nov-' + pedido.id">
+            {{ estadoInfo(np.estado).label }}:
+            {{ np.estado === 'CON_NOVEDAD' ? '¿qué pasó?' : 'motivo de la reprogramación' }}
+          </label>
+          <textarea [id]="'nov-' + pedido.id" rows="2" maxlength="300" [value]="np.texto"
+            (input)="alEscribirNovedad($event)" placeholder="Ej: Faltó entregar una lata de pintura"></textarea>
+          @if (errorNovedad()) { <span class="novedad-error">{{ errorNovedad() }}</span> }
+          <div class="novedad-acciones">
+            <button type="button" class="btn-sec" (click)="cancelarNovedad()">Cancelar</button>
+            <button type="button" class="btn-prim" [disabled]="guardandoNovedad()" (click)="confirmarNovedad()">
+              Confirmar
+            </button>
+          </div>
+        </div>
+        }
+        }
+
+        <div class="acciones">
+          @if (urlWsp(pedido.clienteTelefono); as wsp) {
+          <a class="accion wsp" [href]="wsp" target="_blank" rel="noopener">
+            <svg class="ico">
+              <use href="#i-chat" />
+            </svg> WhatsApp
+          </a>
+          } @else {
+          <span class="accion wsp inactivo"><svg class="ico">
+              <use href="#i-chat" />
+            </svg> WhatsApp</span>
+          }
+          <a class="accion llamar" [href]="urlTel(pedido.clienteTelefono)">
+            <svg class="ico">
+              <use href="#i-phone" />
+            </svg> Llamar
+          </a>
+          <button type="button" class="accion editar" (click)="editarPedido(pedido.id)">
+            <svg class="ico">
+              <use href="#i-edit" />
+            </svg> Editar
+          </button>
+        </div>
+
+        <div class="cambiar-estado">
+          <label [for]="'est-' + pedido.id">Cambiar estado</label>
+          <select [id]="'est-' + pedido.id" (change)="alCambiarEstado(pedido.id, $event)">
+            @if (!esEstadoAdmin(pedido.estado)) {
+            <option [value]="pedido.estado" selected disabled>{{ estadoInfo(pedido.estado).label }}</option>
+            }
+            @for (est of estadosDisponibles; track est.clave) {
+            <option [value]="est.clave" [selected]="est.clave === pedido.estado">{{ est.label }}</option>
+            }
+          </select>
+        </div>
+      </article>
+      }
+    </div>
     }
   </main>
 
@@ -240,44 +293,45 @@
   <p class="hoja-meta">
     Impresa el {{ fechaImpresion() | date:'dd/MM/yyyy HH:mm' }} · {{ pedidos().length }} pedidos
     @if (desde() || hasta()) {
-      · Entregas del {{ desde() ? (desde() | date:'dd/MM/yyyy') : '...' }} al {{ hasta() ? (hasta() | date:'dd/MM/yyyy') : '...' }}
+    · Entregas del {{ desde() ? (desde() | date:'dd/MM/yyyy') : '...' }} al {{ hasta() ? (hasta() | date:'dd/MM/yyyy') :
+    '...' }}
     }
   </p>
 
   @for (g of hojaImpresion(); track g.zonaId) {
-    <section class="hoja-zona">
-      <h2>{{ g.nombre }} <small>({{ g.items.length }})</small></h2>
-      <table>
-        <thead>
-          <tr>
-            <th class="c-num">N°</th>
-            <th>Fecha y horario</th>
-            <th>Cliente</th>
-            <th>Dirección</th>
-            <th>Notas</th>
-            <th class="c-ok">Entregado</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (p of g.items; track p.id; let i = $index) {
-            <tr>
-              <td class="c-num">{{ i + 1 }}</td>
-              <td>
-                {{ p.fechaProgramada | date:'dd/MM/yyyy' }}
-                @if (p.franjaHoraria) { <br>{{ franjas[p.franjaHoraria] }} }
-              </td>
-              <td><strong>{{ p.clienteNombre }}</strong><br>{{ p.clienteTelefono }}</td>
-              <td>{{ p.direccion }}</td>
-              <td>
-                {{ p.observacionEntrega }}
-                @if (comprobante(p)) { <br><strong>Comprob.:</strong> {{ comprobante(p) }} }
-                @if (p.novedad) { <br><strong>Novedad:</strong> {{ p.novedad }} }
-              </td>
-              <td class="c-ok">☐</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </section>
+  <section class="hoja-zona">
+    <h2>{{ g.nombre }} <small>({{ g.items.length }})</small></h2>
+    <table>
+      <thead>
+        <tr>
+          <th class="c-num">N°</th>
+          <th>Fecha y horario</th>
+          <th>Cliente</th>
+          <th>Dirección</th>
+          <th>Notas</th>
+          <th class="c-ok">Entregado</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of g.items; track p.id; let i = $index) {
+        <tr>
+          <td class="c-num">{{ i + 1 }}</td>
+          <td>
+            {{ p.fechaProgramada | date:'dd/MM/yyyy' }}
+            @if (p.franjaHoraria) { <br>{{ franjas[p.franjaHoraria] }} }
+          </td>
+          <td><strong>{{ p.clienteNombre }}</strong><br>{{ p.clienteTelefono }}</td>
+          <td>{{ p.direccion }}</td>
+          <td>
+            {{ p.observacionEntrega }}
+            @if (comprobante(p)) { <br><strong>Comprob.:</strong> {{ comprobante(p) }} }
+            @if (p.novedad) { <br><strong>Novedad:</strong> {{ p.novedad }} }
+          </td>
+          <td class="c-ok">☐</td>
+        </tr>
+        }
+      </tbody>
+    </table>
+  </section>
   }
 </div>

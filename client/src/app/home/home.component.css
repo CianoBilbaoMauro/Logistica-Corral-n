@@ -270,6 +270,25 @@
    ========================================================================== */
 .hoja-impresion { display: none; }
 
+
+
+/* ==========================================================================
+   Facturacion
+   ========================================================================== */
+
+/* Facturación dentro de la tarjeta */
+.factura-box {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .8rem; padding: .6rem .7rem;
+  border: 1px solid var(--color-border-light); border-radius: 8px;
+  background: color-mix(in srgb, var(--color-text-main) 3%, transparent);
+}
+.factura-item { display: grid; gap: .05rem; min-width: 0; font-size: .88rem; color: var(--color-text-main); }
+.factura-item strong { overflow-wrap: anywhere; }
+.factura-label {
+  font-size: .65rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--color-text-muted);
+}
+
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */

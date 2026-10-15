@@ -9,13 +9,13 @@ import { ToastService } from '../services/toast.service';
 import { ConfirmacionService } from '../services/confirmacion.service';
 import { Zona, Pedido, EstadoPedido, Aviso } from '../models/logistica.model';
 import { ESTADO_MAP, ESTADOS_ADMIN, ESTADOS_CON_COMENTARIO, FRANJAS } from '../models/estados';
-import { etiquetaComprobante } from '../models/facturacion';
 import { telefonoWhatsapp } from '../utils/telefono';
 import { urlDestino } from '../utils/mapas';
 import { mensajeError } from '../utils/errores';
 import { BarraSuperiorComponent } from '../shared/barra-superior/barra-superior.component';
 import { BotonTemaComponent } from '../shared/boton-tema/boton-tema.component';
 import { PiePaginaComponent } from '../shared/pie-pagina/pie-pagina.component';
+import { etiquetaComprobante, etiquetaCondicion, etiquetaEmisor, etiquetaTipo } from '../models/facturacion';
 
 const POLLING_MS = 10_000;
 const BUSQUEDA_MS = 300;
@@ -155,6 +155,18 @@ export class HomeComponent implements OnInit {
 
   comprobante(p: Pedido): string {
     return etiquetaComprobante(p);
+  }
+
+  tipo(p: Pedido): string {
+    return etiquetaTipo(p.tipoComprobante);
+  }
+
+  pago(p: Pedido): string { 
+    return etiquetaCondicion(p.condicionPago);
+   }
+
+  emisor(p: Pedido): string {
+    return etiquetaEmisor(p.emisor);
   }
 
   // Iniciales para el círculo de la tarjeta ("María González" -> "MG")

@@ -29,6 +29,28 @@ export function esUbicacionValida(valor: string): boolean {
   }
 }
 
+// Deja la dirección en un formato que Google entienda.
+// "41 nro 1853" / "41 n° 1853" / "41 N 1853" -> "Calle 41 1853"
+export function normalizarDireccion(direccion: string): string {
+  let d = direccion.trim().replace(/\s+/g, ' ');
+
+  // "nro", "nº", "n°", "n." o "no." entre la calle y la altura se descartan
+  d = d.replace(/\b(nro|nº|n°|no)\.?\s*(?=\d)/gi, '');
+
+  // "41 1853" (número solo adelante) -> "Calle 41 1853"
+  if (/^\d{1,3}(\s|$)/.test(d)) d = `Calle ${d}`;
+
+  // "Av 9" / "Avda. 9" -> "Avenida 9"
+  d = d.replace(/^(av|avda)\.?\s+/i, 'Avenida ');
+
+  return d.replace(/\s+/g, ' ').trim();
+}
+
+// True si el destino sale de la dirección escrita (puede ser aproximado) y no de una ubicación exacta
+export function esDestinoAproximado(p: Pick<Pedido, 'ubicacionUrl'>): boolean {
+  return !p.ubicacionUrl?.trim();
+}
+
 // Enlace de "Cómo llegar": usa la ubicación exacta si está cargada y, si no, la dirección más la localidad
 export function urlDestino(p: Pick<Pedido, 'direccion' | 'zonaId' | 'ubicacionUrl'>): string {
   const ubicacion = p.ubicacionUrl?.trim();
@@ -41,6 +63,8 @@ export function urlDestino(p: Pick<Pedido, 'direccion' | 'zonaId' | 'ubicacionUr
   }
 
   const localidad = LOCALIDAD_POR_ZONA[p.zonaId] ?? LOCALIDAD_POR_DEFECTO;
-  const destino = `${p.direccion}, ${localidad}, Buenos Aires, Argentina`;
+  const destino = `${normalizarDireccion(p.direccion)}, ${localidad}, Buenos Aires, Argentina`;
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}`;
 }
+
+ 
