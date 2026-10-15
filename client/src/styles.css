@@ -12,7 +12,7 @@ body {
 
 body::before {
 
-  opacity: 0.02 !important;
+  opacity: 0.05 !important;
   z-index: -1 !important; /* en vez de 0 */
 
   content: "";
@@ -36,7 +36,7 @@ body::before {
 
 /* 🌙 Ajuste de la marca de agua en modo oscuro para que sea más tenue */
 body.dark-theme::before {
-  opacity: 0.04; 
+  opacity: 0.4; 
 }
 
 :root {
@@ -86,3 +86,44 @@ body.dark-theme {
   --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.3);
   --shadow-navbar: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
+
+/* =====================================================================
+   COMPARTIDO POR TODAS LAS PANTALLAS
+   ===================================================================== */
+html { scrollbar-gutter: stable; }
+
+/* Ícono de línea (se dibuja con <svg class="ico"><use href="#i-..."/></svg>) */
+.ico {
+  width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2;
+  stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
+}
+
+/* Oculto a la vista, pero lo leen los lectores de pantalla */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* Color de cada estado: lo leen tarjetas, badges, avisos y botones */
+[data-tono] { --tono: #64748b; }
+[data-tono='gris']     { --tono: #64748b; }
+[data-tono='ambar']    { --tono: #d97706; }
+[data-tono='azul']     { --tono: #2563eb; }
+[data-tono='violeta']  { --tono: #7c3aed; }
+[data-tono='naranja']  { --tono: #ea580c; }
+[data-tono='turquesa'] { --tono: #0d9488; }
+[data-tono='verde']    { --tono: #16a34a; }
+[data-tono='rojo']     { --tono: #dc2626; }
+
+/* Etiqueta de estado */
+.badge {
+  display: inline-flex; align-items: center; gap: .4rem; white-space: nowrap;
+  font-size: .74rem; font-weight: 600; padding: .28rem .65rem; border-radius: 999px;
+  color: var(--tono);
+  background: color-mix(in srgb, var(--tono) 14%, transparent);
+}
+.badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--tono); }
+
+/* Impresión */
+@page { size: A4 landscape; margin: 10mm; }
+@media print { body::before { display: none !important; } }

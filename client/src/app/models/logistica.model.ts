@@ -9,6 +9,10 @@ export type EstadoPedido =
 
 export type FranjaHoraria = 'MANANA' | 'TARDE';
 
+export type TipoComprobante = 'FACTURA_A' | 'FACTURA_B' | 'CONSUMIDOR_FINAL';
+export type CondicionPago = 'CONTADO' | 'CTA_CTE';
+export type Emisor = 'GABARAIN' | 'MATERIALES';
+
 export interface Zona {
   id: string;
   nombre: string;
@@ -26,6 +30,11 @@ export interface Pedido {
   fechaProgramada?: string;
   observacionEntrega?: string;
   camioneroNombre?: string;
+  ubicacionUrl?: string;         // enlace de Google Maps o coordenadas ("-38.27, -57.84")
+  tipoComprobante?: TipoComprobante;
+  condicionPago?: CondicionPago;
+  emisor?: Emisor;               // empresa que factura
+  nroFactura?: string;           // para ubicar el comprobante en papel
   novedad?: string;
   estadoActualizadoEn?: string;
 }

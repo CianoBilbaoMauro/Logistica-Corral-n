@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
 import { Zona, Pedido, EstadoPedido, Aviso } from '../models/logistica.model';
 
 export interface FiltroPedidos {
@@ -15,7 +16,7 @@ export interface FiltroPedidos {
 @Injectable({ providedIn: 'root' })
 export class PedidosService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:3001/api';
+  private apiUrl = environment.apiUrl;
 
   getZonas(): Observable<Zona[]> {
     return this.http.get<Zona[]>(`${this.apiUrl}/zonas`);

@@ -1,44 +1,24 @@
 <div class="welcome-container">
+  <app-barra-superior />
 
-  <!-- NAVBAR SUPERIOR -->
-  <header class="navbar">
-    <div class="navbar-brand">
-      <span class="brand-text">Gabarain</span>
-      <span class="sub-text">| Logística</span>
-    </div>
-  </header>
-
-  <!-- CONTENIDO PRINCIPAL -->
   <main class="main-content">
-
     <div class="welcome-card">
 
-      <!-- LOGO CIRCULAR -->
       <div class="logo-circle-container">
         <img src="/logo-gabarain.png" alt="Gabarain Materiales" class="circular-logo" />
       </div>
 
-      <!-- TEXTO Y DESCRIPCIÓN -->
       <p class="welcome-description">
         Tu aliado en construcción en Miramar. <br> Gestión ágil de despachos y logística.
       </p>
 
-      <!-- BOTÓN PRINCIPAL -->
       <button (click)="irAGestion()" type="button" class="btn-primary">
         GESTIONAR PEDIDOS
       </button>
 
     </div>
-
   </main>
 
-  <button class="btn-floating-theme" (click)="toggleDarkMode()" title="Cambiar tema">
-    <img [src]="isDarkMode ? 'sun.svg' : 'moon-stars.svg'" alt="Tema" class="floating-theme-icon" />
-  </button>
-
-  <!-- FOOTER INFERIOR -->
-  <footer class="footer">
-    AV. 9 NRO. 2107, MIRAMAR
-  </footer>
-
+  <app-boton-tema />
+  <app-pie-pagina alineacion="centro" />
 </div>

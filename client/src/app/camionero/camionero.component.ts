@@ -4,9 +4,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, interval, of } from 'rxjs';
 import { catchError, filter, finalize, switchMap, tap } from 'rxjs/operators';
 import { PedidosService } from '../services/pedidos';
+import { ToastService } from '../services/toast.service';
 import { Zona, Pedido, EstadoPedido } from '../models/logistica.model';
 import { ESTADO_MAP, ESTADOS_CON_COMENTARIO, FRANJAS } from '../models/estados';
+import { urlDestino } from '../utils/mapas';
 import { mensajeError } from '../utils/errores';
+import { BarraSuperiorComponent } from '../shared/barra-superior/barra-superior.component';
+import { BotonTemaComponent } from '../shared/boton-tema/boton-tema.component';
+import { PiePaginaComponent } from '../shared/pie-pagina/pie-pagina.component';
 
 const ZONAS_KEY = 'zonas_camionero';
 const ZONA_KEY_VIEJA = 'zona_camionero';
@@ -45,12 +50,13 @@ function zonasGuardadas(): string[] {
 @Component({
   selector: 'app-camionero',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, BarraSuperiorComponent, BotonTemaComponent, PiePaginaComponent],
   templateUrl: './camionero.component.html',
   styleUrl: './camionero.component.css'
 })
 export class CamioneroComponent implements OnInit {
   private service = inject(PedidosService);
+  private toast = inject(ToastService);
   private destroyRef = inject(DestroyRef);
   private cargar$ = new Subject<{ spinner: boolean }>();
 
@@ -199,7 +205,6 @@ export class CamioneroComponent implements OnInit {
     const anterior = actual.estado;
     this.setEstado(id, estado);      // actualización optimista
     this.marcar(id, true);
-    this.error.set(null);
 
     this.service.actualizarEstado(id, estado, comentario)
       .pipe(finalize(() => this.marcar(id, false)))
@@ -213,7 +218,7 @@ export class CamioneroComponent implements OnInit {
         },
         error: (err) => {
           this.setEstado(id, anterior); // rollback
-          this.error.set(mensajeError(err, 'No se pudo cambiar el estado. Probá de nuevo.'));
+          this.toast.error(mensajeError(err, 'No se pudo cambiar el estado. Probá de nuevo.'));
         }
       });
   }
@@ -238,8 +243,8 @@ export class CamioneroComponent implements OnInit {
     return e === 'ENTREGADO' ? 'Entregado sin novedad' : ESTADO_MAP[e].label;
   }
 
-  urlMapa(dir: string): string {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir)}`;
+  destino(p: Pedido): string {
+    return urlDestino(p);
   }
 
   urlTel(tel: string): string {

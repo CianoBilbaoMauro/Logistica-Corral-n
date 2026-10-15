@@ -1,12 +1,5 @@
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
-  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></symbol>
-</svg>
-
 <div class="order-container">
-  <header class="navbar">
-    <div class="navbar-brand">Gabarain</div>
-  </header>
+  <app-barra-superior />
 
   <main class="main-content">
     <form class="form-card" [formGroup]="form" (ngSubmit)="guardar()" novalidate>
@@ -47,11 +40,63 @@
           @if (msg('clienteTelefono')) { <small class="error">{{ msg('clienteTelefono') }}</small> }
         </div>
 
-        <div class="form-group sin-margen">
+        <div class="form-group">
           <label class="label-sub" for="direccion">Dirección exacta / Obra *</label>
           <input id="direccion" type="text" class="form-input" formControlName="direccion"
                  placeholder="Ej: Av. 9 Nro. 2107" autocomplete="off" />
           @if (msg('direccion')) { <small class="error">{{ msg('direccion') }}</small> }
+        </div>
+
+        <div class="form-group sin-margen">
+          <label class="label-sub" for="ubicacionUrl">Ubicación exacta (opcional)</label>
+          <input id="ubicacionUrl" type="text" class="form-input" formControlName="ubicacionUrl"
+                 placeholder="Enlace de Google Maps o coordenadas" autocomplete="off" />
+          <small class="ayuda">Si el cliente mandó su ubicación por WhatsApp, copiá el enlace y pegalo acá. El camionero llega directo al punto.</small>
+          @if (msg('ubicacionUrl')) { <small class="error">{{ msg('ubicacionUrl') }}</small> }
+        </div>
+      </fieldset>
+
+      <fieldset class="fieldset-cliente">
+        <legend class="legend-cliente">Facturación</legend>
+
+        <div class="fila-3">
+          <div class="form-group">
+            <label class="label-sub" for="tipoComprobante">Comprobante</label>
+            <select id="tipoComprobante" class="form-select" formControlName="tipoComprobante">
+              <option value="">Sin especificar</option>
+              @for (t of tiposComprobante; track t.clave) {
+                <option [value]="t.clave">{{ t.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="label-sub" for="condicionPago">Condición de pago</label>
+            <select id="condicionPago" class="form-select" formControlName="condicionPago">
+              <option value="">Sin especificar</option>
+              @for (c of condicionesPago; track c.clave) {
+                <option [value]="c.clave">{{ c.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="label-sub" for="emisor">Facturado por</label>
+            <select id="emisor" class="form-select" formControlName="emisor">
+              <option value="">Sin especificar</option>
+              @for (e of emisores; track e.clave) {
+                <option [value]="e.clave">{{ e.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group sin-margen">
+          <label class="label-sub" for="nroFactura">N° de factura</label>
+          <input id="nroFactura" type="text" class="form-input" formControlName="nroFactura"
+                 placeholder="Ej: 0001-00001234" autocomplete="off" maxlength="30" />
+          <small class="ayuda">Sirve para ubicar el comprobante en papel si hay un reclamo con la entrega.</small>
+          @if (msg('nroFactura')) { <small class="error">{{ msg('nroFactura') }}</small> }
         </div>
       </fieldset>
 
@@ -97,9 +142,6 @@
     </form>
   </main>
 
-  <button type="button" class="btn-floating-theme" (click)="toggleDarkMode()" aria-label="Cambiar tema" title="Cambiar tema">
-    <svg class="ico"><use [attr.href]="isDarkMode ? '#i-sun' : '#i-moon'"/></svg>
-  </button>
-
-  <footer class="footer">AV. 9 NRO. 2107, MIRAMAR</footer>
+  <app-boton-tema />
+  <app-pie-pagina />
 </div>

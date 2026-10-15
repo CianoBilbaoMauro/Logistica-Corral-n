@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { ESTADOS_PEDIDO } from '../models/pedido.model.js';
+import {
+  CONDICIONES_PAGO, EMISORES, ESTADOS_PEDIDO, TIPOS_COMPROBANTE,
+} from '../models/pedido.model.js';
 
 // El front manda '' en los campos opcionales vacíos: lo tratamos como "sin valor"
 const vacioAUndefined = (v: unknown) =>
@@ -15,13 +17,48 @@ const telefono = z
 
 const fechaISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida');
 
+// Solo se aceptan coordenadas o enlaces https de Google Maps (evita guardar enlaces a sitios ajenos)
+const COORDENADAS = /^-?\d{1,3}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?$/;
+
+function esUbicacionValida(valor: string): boolean {
+  if (COORDENADAS.test(valor)) return true;
+  try {
+    const url = new URL(valor);
+    if (url.protocol !== 'https:') return false;
+    const host = url.hostname.toLowerCase();
+    if (host === 'maps.app.goo.gl' || host === 'maps.google.com') return true;
+    if (host === 'goo.gl') return url.pathname.startsWith('/maps');
+    return /^(www\.)?google\.com(\.ar)?$/.test(host) && url.pathname.startsWith('/maps');
+  } catch {
+    return false;
+  }
+}
+
+const ubicacion = z
+  .string()
+  .trim()
+  .max(300)
+  .refine(esUbicacionValida, 'Ubicación inválida: pegá un enlace de Google Maps o coordenadas');
+
+// Número de factura: letras, números, guiones y barras (ej: 0001-00001234)
+const nroFactura = z
+  .string()
+  .trim()
+  .max(30, 'El número de factura es demasiado largo')
+  .regex(/^[A-Za-z0-9\-/ ]+$/, 'El número de factura solo puede tener letras, números y guiones');
+
 export const pedidoSchema = z.object({
   zonaId: z.string().min(1, 'La zona es obligatoria'),
   clienteNombre: z.string().trim().min(2, 'Nombre demasiado corto').max(100),
   clienteTelefono: telefono,
   direccion: z.string().trim().min(3, 'Dirección demasiado corta').max(200),
+  ubicacionUrl: z.preprocess(vacioAUndefined, ubicacion.optional()),
   fechaProgramada: z.preprocess(vacioAUndefined, fechaISO.optional()),
   franjaHoraria: z.preprocess(vacioAUndefined, z.enum(['MANANA', 'TARDE']).optional()),
+  tipoComprobante: z.preprocess(vacioAUndefined, z.enum(TIPOS_COMPROBANTE).optional()),
+  condicionPago: z.preprocess(vacioAUndefined, z.enum(CONDICIONES_PAGO).optional()),
+  emisor: z.preprocess(vacioAUndefined, z.enum(EMISORES).optional()),
+  nroFactura: z.preprocess(vacioAUndefined, nroFactura.optional()),
   camioneroNombre: textoOpcional(100),
   observacionEntrega: textoOpcional(500),
 });

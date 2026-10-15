@@ -6,14 +6,14 @@ export interface FiltroPedidos {
   estado?: EstadoPedido;
   desde?: string; // YYYY-MM-DD, incluida
   hasta?: string; // YYYY-MM-DD, incluida
-  q?: string;     // texto libre: cliente, teléfono o dirección
+  q?: string;     // texto libre: cliente, teléfono, dirección o número de factura
 }
 
 const sinAcentos = (s: string) =>
   s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 function coincideBusqueda(p: Pedido, q: string): boolean {
-  const texto = sinAcentos(`${p.clienteNombre} ${p.direccion}`);
+  const texto = sinAcentos(`${p.clienteNombre} ${p.direccion} ${p.nroFactura ?? ''}`);
   const tel = (p.clienteTelefono ?? '').replace(/\D/g, '');
 
   // Si lo escrito parece un teléfono (con espacios o guiones), se compara con los dígitos
@@ -22,7 +22,7 @@ function coincideBusqueda(p: Pedido, q: string): boolean {
     if (digitos.length >= 3 && tel.includes(digitos)) return true;
   }
 
-  // Cada palabra tiene que aparecer en el nombre, la dirección o el teléfono
+  // Cada palabra tiene que aparecer en el nombre, la dirección, la factura o el teléfono
   return sinAcentos(q)
     .split(/\s+/)
     .filter(Boolean)

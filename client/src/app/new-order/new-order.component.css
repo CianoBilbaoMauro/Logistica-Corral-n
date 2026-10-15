@@ -7,24 +7,9 @@
   position: relative; z-index: 1;
 }
 
-.ico {
-  width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2;
-  stroke-linecap: round; stroke-linejoin: round;
-}
-
-/* NAVBAR / FOOTER */
-.navbar {
-  background: var(--color-primary); color: var(--color-navbar-text);
-  padding: 1rem 2rem; box-shadow: var(--shadow-navbar);
-}
-.navbar-brand { font-size: 1.4rem; font-weight: 800; letter-spacing: .5px; }
-
-.footer {
-  background: var(--color-primary); color: var(--color-navbar-text);
-  text-align: center; padding: 1rem; font-size: .9rem; font-weight: 500; margin-top: auto;
-}
-
-/* CONTENIDO */
+/* ==========================================================================
+   CONTENIDO
+   ========================================================================== */
 .main-content {
   flex: 1; width: 100%; max-width: 580px; margin: 2rem auto;
   padding: 0 1rem; box-sizing: border-box;
@@ -44,10 +29,13 @@
   border: 1px solid color-mix(in srgb, #dc2626 35%, transparent);
 }
 
-/* CAMPOS */
+/* ==========================================================================
+   CAMPOS
+   ========================================================================== */
 .form-group { margin-bottom: 1.1rem; }
 .form-group.sin-margen { margin-bottom: 0; }
 .fila-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.fila-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; }
 
 .form-label { display: block; margin-bottom: .4rem; font-size: .9rem; font-weight: 600; }
 .label-sub { display: block; margin-bottom: .3rem; font-size: .85rem; font-weight: 500; }
@@ -63,6 +51,7 @@
 .form-textarea.ng-touched.ng-invalid { border-color: #dc2626; }
 
 .error { display: block; margin-top: .3rem; color: #dc2626; font-size: .8rem; }
+.ayuda { display: block; margin-top: .3rem; color: var(--color-text-muted); font-size: .78rem; line-height: 1.35; }
 
 .fieldset-cliente {
   margin: 0 0 1.1rem; padding: 1.1rem; border: 1px solid var(--color-border-light);
@@ -75,7 +64,9 @@
   text-transform: uppercase; letter-spacing: .05em; color: var(--color-text-muted);
 }
 
-/* BOTONES */
+/* ==========================================================================
+   BOTONES
+   ========================================================================== */
 .actions-group { display: flex; gap: 1rem; margin-top: 1.6rem; }
 .btn-cancelar, .btn-guardar {
   flex: 1; padding: .85rem; border: none; border-radius: 8px;
@@ -86,17 +77,10 @@
 .btn-guardar:hover:not(:disabled) { background: var(--color-primary-hover); }
 .btn-guardar:disabled { opacity: .6; cursor: not-allowed; }
 
-.btn-floating-theme {
-  position: fixed; bottom: 55px; right: 25px; width: 50px; height: 50px;
-  background: var(--color-primary); border: none; border-radius: 50%; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .35); z-index: 100;
-}
-
 @media (max-width: 520px) {
-  .navbar { padding: .8rem 1rem; }
   .main-content { margin: 1rem auto; padding: 0 .8rem; }
   .form-card { padding: 1.2rem; }
   .fila-2 { grid-template-columns: 1fr; gap: 0; }
+  .fila-3 { grid-template-columns: 1fr; gap: 0; }
   .actions-group { flex-direction: column-reverse; gap: .6rem; }
 }

@@ -1,81 +1,123 @@
-import { Component, DestroyRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Subject, interval } from 'rxjs';
 import { debounceTime, filter } from 'rxjs/operators';
 import { FiltroPedidos, PedidosService } from '../services/pedidos';
+import { ToastService } from '../services/toast.service';
+import { ConfirmacionService } from '../services/confirmacion.service';
 import { Zona, Pedido, EstadoPedido, Aviso } from '../models/logistica.model';
 import { ESTADO_MAP, ESTADOS_ADMIN, ESTADOS_CON_COMENTARIO, FRANJAS } from '../models/estados';
+import { etiquetaComprobante } from '../models/facturacion';
+import { telefonoWhatsapp } from '../utils/telefono';
+import { urlDestino } from '../utils/mapas';
 import { mensajeError } from '../utils/errores';
+import { BarraSuperiorComponent } from '../shared/barra-superior/barra-superior.component';
+import { BotonTemaComponent } from '../shared/boton-tema/boton-tema.component';
+import { PiePaginaComponent } from '../shared/pie-pagina/pie-pagina.component';
 
 const POLLING_MS = 10_000;
 const BUSQUEDA_MS = 300;
 
 interface NovedadPendiente { id: string; estado: EstadoPedido; texto: string; }
 
-type Rapido = 'hoy' | '7dias' | 'mes' | 'todos' | 'personalizado';
-
-// Fecha local en formato YYYY-MM-DD (sin desfase por zona horaria)
-function fechaLocal(d: Date): string {
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
-}
-
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, BarraSuperiorComponent, BotonTemaComponent, PiePaginaComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
 export class HomeComponent implements OnInit {
-  private pedidosService = inject(PedidosService);
+  private service = inject(PedidosService);
   private router = inject(Router);
-  private cdr = inject(ChangeDetectorRef);
+  private toast = inject(ToastService);
+  private confirmacion = inject(ConfirmacionService);
   private destroyRef = inject(DestroyRef);
   private busqueda$ = new Subject<void>();
 
   // Para ignorar respuestas viejas si se cambia el filtro rápido
   private pedidoReqId = 0;
 
-  pedidos: Pedido[] = [];
-  zonas: Zona[] = [];
-  avisos: Aviso[] = [];
+  // Datos
+  zonas = signal<Zona[]>([]);
+  avisos = signal<Aviso[]>([]);
+  // Lo que devuelve el servidor para zona, fechas y búsqueda (sin filtrar por estado)
+  pedidosCargados = signal<Pedido[]>([]);
 
   // Filtros
-  zonaSeleccionada = '';
-  estadoFiltro: EstadoPedido | '' = '';
-  busqueda = '';
-  desde = '';
-  hasta = '';
-  rapido: Rapido = 'todos';
+  zonaSeleccionada = signal('');
+  estadoFiltro = signal<EstadoPedido | ''>('');
+  busqueda = signal('');
+  desde = signal('');
+  hasta = signal('');
 
-  cargando = false;
-  isDarkMode = false;
+  // Pantalla
+  cargando = signal(false);
+  sinConexion = signal(false);
+  fechaImpresion = signal(new Date());
 
-  novedadPendiente: NovedadPendiente | null = null;
-  errorNovedad = '';
-  guardandoNovedad = false;
+  // Comentario de Con novedad / Reprogramado
+  novedadPendiente = signal<NovedadPendiente | null>(null);
+  errorNovedad = signal('');
+  guardandoNovedad = signal(false);
 
   estadosDisponibles = ESTADOS_ADMIN.map(c => ESTADO_MAP[c]);
   franjas = FRANJAS;
 
-  chips: { clave: Rapido; label: string }[] = [
-    { clave: 'hoy', label: 'Hoy' },
-    { clave: '7dias', label: 'Últimos 7 días' },
-    { clave: 'mes', label: 'Este mes' },
-    { clave: 'todos', label: 'Todos' },
-  ];
+  // Lo que se ve en pantalla: lo cargado, más el filtro por estado (instantáneo)
+  pedidos = computed(() => {
+    const estado = this.estadoFiltro();
+    const todos = this.pedidosCargados();
+    return estado ? todos.filter(p => p.estado === estado) : todos;
+  });
 
-  get hayFiltros(): boolean {
-    return !!(this.zonaSeleccionada || this.estadoFiltro || this.busqueda.trim() || this.desde || this.hasta);
-  }
+  hayFiltros = computed(() =>
+    !!(this.zonaSeleccionada() || this.estadoFiltro() || this.busqueda().trim() || this.desde() || this.hasta())
+  );
+
+  // Cantidad de pedidos por estado, sobre lo cargado
+  resumen = computed(() => {
+    const conteo = new Map<EstadoPedido, number>();
+    for (const p of this.pedidosCargados()) conteo.set(p.estado, (conteo.get(p.estado) ?? 0) + 1);
+    return ESTADOS_ADMIN.map(clave => ({ ...ESTADO_MAP[clave], cantidad: conteo.get(clave) ?? 0 }));
+  });
+
+  zonaNombres = computed(() =>
+    new Map<string, string>(this.zonas().map(z => [String(z.id), z.nombre] as [string, string]))
+  );
+
+  // Hoja de ruta: pedidos agrupados por zona y ordenados por fecha, horario y dirección
+  hojaImpresion = computed(() => {
+    const posicion = new Map<string, number>(this.zonas().map((z, i) => [String(z.id), i] as [string, number]));
+    const nombres = this.zonaNombres();
+    const franja: Record<string, number> = { MANANA: 0, TARDE: 1 };
+
+    const ordenados = [...this.pedidos()].sort((a, b) =>
+      (posicion.get(String(a.zonaId)) ?? 99) - (posicion.get(String(b.zonaId)) ?? 99) ||
+      (a.fechaProgramada ?? '9999').localeCompare(b.fechaProgramada ?? '9999') ||
+      (franja[a.franjaHoraria ?? ''] ?? 2) - (franja[b.franjaHoraria ?? ''] ?? 2) ||
+      a.direccion.localeCompare(b.direccion)
+    );
+
+    const grupos: { zonaId: string; nombre: string; items: Pedido[] }[] = [];
+    for (const p of ordenados) {
+      let grupo = grupos[grupos.length - 1];
+      if (!grupo || grupo.zonaId !== p.zonaId) {
+        grupo = { zonaId: p.zonaId, nombre: nombres.get(String(p.zonaId)) ?? 'Sin zona', items: [] };
+        grupos.push(grupo);
+      }
+      grupo.items.push(p);
+    }
+    return grupos;
+  });
 
   ngOnInit(): void {
-    this.isDarkMode = document.body.classList.contains('dark-theme');
-    this.cargarZonas();
+    this.service.getZonas().subscribe({
+      next: (zonas) => this.zonas.set(zonas),
+      error: (err) => this.toast.error(mensajeError(err, 'No se pudieron cargar las zonas.')),
+    });
     this.cargarPedidos();
     this.cargarAvisos();
 
@@ -83,14 +125,14 @@ export class HomeComponent implements OnInit {
     this.busqueda$.pipe(
       debounceTime(BUSQUEDA_MS),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(() => this.cargarPedidos(this.zonaSeleccionada));
+    ).subscribe(() => this.cargarPedidos());
 
     // Refresco automático (pausa si la pestaña está oculta)
     interval(POLLING_MS).pipe(
       filter(() => document.visibilityState === 'visible'),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => {
-      this.refrescarPedidos();
+      this.cargarPedidos(false);
       this.cargarAvisos();
     });
   }
@@ -103,188 +145,119 @@ export class HomeComponent implements OnInit {
     return ESTADOS_ADMIN.includes(e);
   }
 
-  toggleDarkMode(): void {
-    this.isDarkMode = !this.isDarkMode;
-    document.body.classList.toggle('dark-theme', this.isDarkMode);
+  zonaNombre(id: string): string {
+    return this.zonaNombres().get(String(id)) ?? '';
   }
 
-  cargarZonas(): void {
-    this.pedidosService.getZonas().subscribe({
-      next: (data) => { this.zonas = data; this.cdr.detectChanges(); }
-    });
+  destino(p: Pedido): string {
+    return urlDestino(p);
   }
 
-  // ---------- Filtros ----------
-  private filtroActual(): FiltroPedidos {
+  comprobante(p: Pedido): string {
+    return etiquetaComprobante(p);
+  }
+
+  // Iniciales para el círculo de la tarjeta ("María González" -> "MG")
+  iniciales(nombre: string): string {
+    const palabras = nombre.trim().split(/\s+/).filter(Boolean);
+    const letras = palabras.length > 1 ? palabras[0][0] + palabras[1][0] : (palabras[0] ?? '?').slice(0, 2);
+    return letras.toUpperCase();
+  }
+
+  urlTel(tel: string): string {
+    return 'tel:' + tel.replace(/[^\d+]/g, '');
+  }
+
+  // Chat directo con el cliente (distinto de los avisos automáticos)
+  urlWsp(tel: string): string | null {
+    const numero = telefonoWhatsapp(tel);
+    return numero ? `https://wa.me/${numero}` : null;
+  }
+
+  // ---------- Carga y filtros ----------
+  private filtroServidor(): FiltroPedidos {
     return {
-      zonaId: this.zonaSeleccionada || undefined,
-      estado: this.estadoFiltro || undefined,
-      desde: this.desde || undefined,
-      hasta: this.hasta || undefined,
-      q: this.busqueda.trim() || undefined,
+      zonaId: this.zonaSeleccionada() || undefined,
+      desde: this.desde() || undefined,
+      hasta: this.hasta() || undefined,
+      q: this.busqueda().trim() || undefined,
     };
   }
 
-  cargarPedidos(zonaId?: string): void {
-    // El cartel "Cargando..." solo aparece si no hay nada en pantalla (evita que la lista salte)
-    this.cargando = this.pedidos.length === 0;
-    this.zonaSeleccionada = zonaId || '';
+  // conAviso = false: refresco silencioso (no muestra "Cargando..." ni avisa si falla)
+  cargarPedidos(conAviso = true): void {
+    if (conAviso && this.pedidosCargados().length === 0) this.cargando.set(true);
     const reqId = ++this.pedidoReqId;
 
-    this.pedidosService.getPedidos(this.filtroActual()).subscribe({
+    this.service.getPedidos(this.filtroServidor()).subscribe({
       next: (data) => {
         if (reqId !== this.pedidoReqId) return;
-        this.pedidos = [...data];
-        this.cargando = false;
-        this.cdr.detectChanges();
+        this.pedidosCargados.set(data);
+        this.cargando.set(false);
+        this.sinConexion.set(false);
       },
-      error: () => {
+      error: (err) => {
         if (reqId !== this.pedidoReqId) return;
-        this.cargando = false;
-        this.cdr.detectChanges();
+        this.cargando.set(false);
+        this.sinConexion.set(true);
+        if (conAviso) this.toast.error(mensajeError(err, 'No se pudieron cargar los pedidos.'));
       }
     });
   }
 
-  // Igual que cargarPedidos pero sin tocar el cartel de carga
-  private refrescarPedidos(): void {
-    const reqId = ++this.pedidoReqId;
-    this.pedidosService.getPedidos(this.filtroActual()).subscribe({
-      next: (data) => {
-        if (reqId !== this.pedidoReqId) return;
-        this.pedidos = [...data];
-        this.cdr.detectChanges();
-      }
-    });
+  alCambiarZona(event: Event): void {
+    this.zonaSeleccionada.set((event.target as HTMLSelectElement).value);
+    this.cargarPedidos();
   }
 
   alBuscar(event: Event): void {
-    this.busqueda = (event.target as HTMLInputElement).value;
+    this.busqueda.set((event.target as HTMLInputElement).value);
     this.busqueda$.next();
   }
 
-  alCambiarFiltroEstado(event: Event): void {
-    this.estadoFiltro = (event.target as HTMLSelectElement).value as EstadoPedido | '';
-    this.cargarPedidos(this.zonaSeleccionada);
-  }
-
-  aplicarRapido(r: Rapido): void {
-    const hoy = new Date();
-    if (r === 'hoy') {
-      this.desde = this.hasta = fechaLocal(hoy);
-    } else if (r === '7dias') {
-      const inicio = new Date(hoy);
-      inicio.setDate(inicio.getDate() - 6);
-      this.desde = fechaLocal(inicio);
-      this.hasta = fechaLocal(hoy);
-    } else if (r === 'mes') {
-      this.desde = fechaLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
-      this.hasta = fechaLocal(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
-    } else {
-      this.desde = '';
-      this.hasta = '';
-    }
-    this.rapido = r;
-    this.cargarPedidos(this.zonaSeleccionada);
+  // Desde el resumen: tocar el estado activo lo desactiva
+  filtrarEstado(estado: EstadoPedido | ''): void {
+    this.estadoFiltro.set(this.estadoFiltro() === estado ? '' : estado);
   }
 
   alCambiarDesde(event: Event): void {
-    this.desde = (event.target as HTMLInputElement).value;
-    if (this.desde && this.hasta && this.desde > this.hasta) this.hasta = this.desde;
-    this.rapido = this.desde || this.hasta ? 'personalizado' : 'todos';
-    this.cargarPedidos(this.zonaSeleccionada);
+    const valor = (event.target as HTMLInputElement).value;
+    this.desde.set(valor);
+    if (valor && this.hasta() && valor > this.hasta()) this.hasta.set(valor);
+    this.cargarPedidos();
   }
 
   alCambiarHasta(event: Event): void {
-    this.hasta = (event.target as HTMLInputElement).value;
-    if (this.desde && this.hasta && this.hasta < this.desde) this.desde = this.hasta;
-    this.rapido = this.desde || this.hasta ? 'personalizado' : 'todos';
-    this.cargarPedidos(this.zonaSeleccionada);
+    const valor = (event.target as HTMLInputElement).value;
+    this.hasta.set(valor);
+    if (valor && this.desde() && valor < this.desde()) this.desde.set(valor);
+    this.cargarPedidos();
   }
 
   limpiarFiltros(): void {
-    this.desde = '';
-    this.hasta = '';
-    this.estadoFiltro = '';
-    this.busqueda = '';
-    this.rapido = 'todos';
-    this.cargarPedidos('');
+    this.zonaSeleccionada.set('');
+    this.estadoFiltro.set('');
+    this.busqueda.set('');
+    this.desde.set('');
+    this.hasta.set('');
+    this.cargarPedidos();
   }
 
-  // ---------- Avisos ----------
+  // ---------- Imprimir ----------
+  imprimirHoja(): void {
+    if (this.pedidos().length === 0) {
+      this.toast.info('No hay pedidos para imprimir.');
+      return;
+    }
+    this.fechaImpresion.set(new Date());
+    // Pequeña espera para que la hoja se actualice antes de abrir el cuadro de impresión
+    setTimeout(() => window.print(), 100);
+  }
+
+  // ---------- Avisos a clientes ----------
   cargarAvisos(): void {
-    this.pedidosService.getAvisosPendientes().subscribe({
-      next: (data) => { this.avisos = data; this.cdr.detectChanges(); }
-    });
-  }
-
-  // ---------- Estados ----------
-  alCambiarEstado(id: string, event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    const nuevo = select.value as EstadoPedido;
-    const anterior = this.pedidos.find(p => p.id === id)?.estado;
-
-    // Con novedad / Reprogramado piden un comentario: el select vuelve atrás hasta confirmar
-    if (ESTADOS_CON_COMENTARIO.includes(nuevo)) {
-      if (anterior) select.value = anterior;
-      this.errorNovedad = '';
-      this.novedadPendiente = { id, estado: nuevo, texto: '' };
-      this.cdr.detectChanges();
-      return;
-    }
-
-    this.novedadPendiente = null;
-    this.enviarEstado(id, nuevo, undefined, {
-      alError: (msg) => {
-        if (anterior) select.value = anterior; // vuelve al estado anterior
-        alert(msg);
-      }
-    });
-  }
-
-  alEscribirNovedad(event: Event): void {
-    if (this.novedadPendiente) {
-      this.novedadPendiente.texto = (event.target as HTMLTextAreaElement).value;
-    }
-  }
-
-  cancelarNovedad(): void {
-    this.novedadPendiente = null;
-    this.errorNovedad = '';
-  }
-
-  confirmarNovedad(): void {
-    const np = this.novedadPendiente;
-    if (!np) return;
-    const texto = np.texto.trim();
-    if (texto.length < 3) {
-      this.errorNovedad = np.estado === 'CON_NOVEDAD' ? 'Contanos brevemente qué pasó' : 'Indicá el motivo';
-      return;
-    }
-
-    this.guardandoNovedad = true;
-    this.enviarEstado(np.id, np.estado, texto, {
-      alExito: () => { this.novedadPendiente = null; this.guardandoNovedad = false; },
-      alError: (msg) => { this.errorNovedad = msg; this.guardandoNovedad = false; this.cdr.detectChanges(); }
-    });
-  }
-
-  private enviarEstado(
-    id: string,
-    estado: EstadoPedido,
-    comentario: string | undefined,
-    cb: { alExito?: () => void; alError?: (msg: string) => void }
-  ): void {
-    this.pedidosService.actualizarEstado(id, estado, comentario).subscribe({
-      next: (res) => {
-        this.pedidos = this.pedidos.map(p => p.id === id ? res : p);
-        cb.alExito?.();
-        this.cdr.detectChanges();
-        this.cargarAvisos(); // el backend pudo generar un aviso nuevo
-      },
-      error: (err) => {
-        cb.alError?.(mensajeError(err, 'No se pudo cambiar el estado'));
-      }
+    this.service.getAvisosPendientes().subscribe({
+      next: (data) => this.avisos.set(data),
     });
   }
 
@@ -296,36 +269,126 @@ export class HomeComponent implements OnInit {
       '_blank',
       'noopener'
     );
-    this.pedidosService.marcarAvisoEnviado(aviso.id).subscribe({
-      next: () => this.quitarAviso(aviso.id),
-      error: () => alert('Se abrió WhatsApp, pero no se pudo marcar el aviso como enviado.')
+    this.service.marcarAvisoEnviado(aviso.id).subscribe({
+      next: () => {
+        this.quitarAviso(aviso.id);
+        this.toast.exito('Aviso marcado como enviado.');
+      },
+      error: () => this.toast.error('Se abrió WhatsApp, pero no se pudo marcar el aviso como enviado.')
     });
   }
 
   descartarAviso(aviso: Aviso): void {
-    this.pedidosService.descartarAviso(aviso.id).subscribe({
-      next: () => this.quitarAviso(aviso.id),
-      error: () => alert('No se pudo descartar el aviso')
+    this.service.descartarAviso(aviso.id).subscribe({
+      next: () => {
+        this.quitarAviso(aviso.id);
+        this.toast.info('Aviso descartado.');
+      },
+      error: (err) => this.toast.error(mensajeError(err, 'No se pudo descartar el aviso.'))
     });
   }
 
   private quitarAviso(id: string): void {
-    this.avisos = this.avisos.filter(a => a.id !== id);
-    this.cdr.detectChanges();
+    this.avisos.update(l => l.filter(a => a.id !== id));
   }
 
+  // ---------- Estados ----------
+  alCambiarEstado(id: string, event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const nuevo = select.value as EstadoPedido;
+    const actual = this.pedidosCargados().find(p => p.id === id);
+    if (!actual || actual.estado === nuevo) return;
+
+    // Con novedad / Reprogramado piden un comentario: el select vuelve atrás hasta confirmar
+    if (ESTADOS_CON_COMENTARIO.includes(nuevo)) {
+      select.value = actual.estado;
+      this.errorNovedad.set('');
+      this.novedadPendiente.set({ id, estado: nuevo, texto: '' });
+      return;
+    }
+
+    this.novedadPendiente.set(null);
+    this.enviarEstado(id, nuevo, undefined, {
+      alError: (msg) => {
+        select.value = actual.estado; // vuelve al estado anterior
+        this.toast.error(msg);
+      }
+    });
+  }
+
+  alEscribirNovedad(event: Event): void {
+    const texto = (event.target as HTMLTextAreaElement).value;
+    this.novedadPendiente.update(n => (n ? { ...n, texto } : n));
+  }
+
+  cancelarNovedad(): void {
+    this.novedadPendiente.set(null);
+    this.errorNovedad.set('');
+  }
+
+  confirmarNovedad(): void {
+    const np = this.novedadPendiente();
+    if (!np) return;
+    const texto = np.texto.trim();
+    if (texto.length < 3) {
+      this.errorNovedad.set(np.estado === 'CON_NOVEDAD' ? 'Contanos brevemente qué pasó' : 'Indicá el motivo');
+      return;
+    }
+
+    this.guardandoNovedad.set(true);
+    this.enviarEstado(np.id, np.estado, texto, {
+      alExito: () => {
+        this.novedadPendiente.set(null);
+        this.guardandoNovedad.set(false);
+      },
+      alError: (msg) => {
+        this.errorNovedad.set(msg);
+        this.guardandoNovedad.set(false);
+      }
+    });
+  }
+
+  private enviarEstado(
+    id: string,
+    estado: EstadoPedido,
+    comentario: string | undefined,
+    cb: { alExito?: () => void; alError?: (msg: string) => void }
+  ): void {
+    this.service.actualizarEstado(id, estado, comentario).subscribe({
+      next: (res) => {
+        this.pedidosCargados.update(l => l.map(p => p.id === id ? res : p));
+        cb.alExito?.();
+        this.toast.exito(`${res.clienteNombre}: ${this.estadoInfo(res.estado).label}`);
+        this.cargarAvisos(); // el backend pudo generar un aviso nuevo
+      },
+      error: (err) => {
+        const msg = mensajeError(err, 'No se pudo cambiar el estado.');
+        if (cb.alError) cb.alError(msg);
+        else this.toast.error(msg);
+      }
+    });
+  }
+
+  // ---------- Pedidos ----------
   irANuevoPedido(): void { this.router.navigate(['/new-order']); }
   editarPedido(id: string): void { this.router.navigate(['/edit-order', id]); }
 
-  eliminarPedido(id: string): void {
-    if (!confirm('¿Eliminar este pedido?')) return;
-    this.pedidosService.deletePedido(id).subscribe({
+  async eliminarPedido(p: Pedido): Promise<void> {
+    const aceptado = await this.confirmacion.pedir({
+      titulo: 'Eliminar pedido',
+      mensaje: `Se va a eliminar el pedido de ${p.clienteNombre}. Esta acción no se puede deshacer.`,
+      textoConfirmar: 'Eliminar',
+      peligro: true,
+    });
+    if (!aceptado) return;
+
+    this.service.deletePedido(p.id).subscribe({
       next: () => {
-        this.pedidos = this.pedidos.filter(p => p.id !== id);
-        this.cdr.detectChanges();
+        this.pedidosCargados.update(l => l.filter(x => x.id !== p.id));
         this.cargarAvisos();
+        this.toast.exito('Pedido eliminado.');
       },
-      error: () => alert('No se pudo eliminar')
+      error: (err) => this.toast.error(mensajeError(err, 'No se pudo eliminar el pedido.'))
     });
   }
 }
